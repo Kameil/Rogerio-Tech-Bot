@@ -104,3 +104,5 @@ class Chat(commands.Cog):
 
         await self.bot.process_commands(message)
 
+async def setup(bot):
+    await bot.add_cog(Chat(bot))
