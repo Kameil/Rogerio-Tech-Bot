@@ -40,7 +40,7 @@ bot.generation_config = generation_config
 async def on_ready():
     for file in os.listdir("cogs"):
         if file.endswith(".py"):
-            bot.load_extension(f"cogs.{file[:-3]}")
+            await bot.load_extension(f"cogs.{file[:-3]}")
     print("Bot on.")
 
 bot.run(token)

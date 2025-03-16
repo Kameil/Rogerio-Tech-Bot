@@ -9,7 +9,7 @@ import textwrap
 
 
 class Analisar(commands.Cog):
-    async def __init__(self, bot):
+    def __init__(self, bot):
         self.bot = bot
         self.model = bot.model
         self.generation_config = bot.generation_config
