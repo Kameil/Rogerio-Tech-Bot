@@ -1,0 +1,33 @@
+from discord import app_commands
+from discord.ext import commands
+import discord
+
+class Resetar(commands.Cog):
+    def __init__(self, bot):
+        self.bot = bot
+        self.model = bot.model
+        self.generation_config = bot.generation_config
+        self.chats = bot.chats
+
+    @app_commands.command(name='resetar', description='Resetar a conversa com o bot no canal atual.')
+    async def pedra(self, inter: discord.Interaction):
+        try:
+            channel_id = str(inter.channel.id)
+            if channel_id in self.chats:
+                try:
+                    msgs = len(self.chats[channel_id].history)
+                except:
+                    msgs = "undefined"
+                self.chats[channel_id] = self.model.start_chat()
+                embed = discord.Embed(title="Conversa resetada", description="A conversa com o bot foi resetada com sucesso.", color=discord.Color.green())
+                embed.set_footer(text=f"{msgs} mensagens foram apagadas.")
+                await inter.response.send_message(embed=embed)
+
+            else:
+                await inter.response.send_message("Nao ha conversa para resetar.")
+        except Exception as e:
+            await inter.response.send_message(f"deu bom nao. Erro: ```python\n{e}\n```")
+
+
+async def setup(bot):
+    await bot.add_cog(Resetar(bot))
