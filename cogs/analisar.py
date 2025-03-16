@@ -17,7 +17,7 @@ class Analisar(commands.Cog):
 
 
     @app_commands.command(name='analisar', description='descobrir se e desenrolado.')
-    @app_commands.describe(user="Usuario a ser analisado", mpc="Mensagens por canal. Padrao:100")    
+    @app_commands.describe(user="Usuario a ser analisado", mpc="Mensagens por canal. Padrao:100", prompt="Analise + prompt | nome do usuario + mensagens do usuario")    
     async def Jokenpo(self, inter: discord.Interaction, user: discord.User, prompt: str=None, mpc: int=100):
         await inter.response.defer()
         if isinstance(inter.channel, discord.DMChannel):
