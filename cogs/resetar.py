@@ -26,7 +26,8 @@ class Resetar(commands.Cog):
             else:
                 await inter.response.send_message("Nao ha conversa para resetar.")
         except Exception as e:
-            await inter.response.send_message(f"deu bom nao. Erro: ```python\n{e}\n```")
+            embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}```", color=discord.Color.red())
+            await inter.response.send_message(embed=embed)
 
 
 async def setup(bot):

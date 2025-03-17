@@ -79,7 +79,8 @@ class Chat(commands.Cog):
                             conteudo += chunk.text  
                             await message_enviada.edit(content=conteudo)
                 except Exception as e:
-                    await message.channel.send(f"Deu bom nao." + "```python\n" + str(e) + "\n```")
+                    embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}```", color=discord.Color.red())
+                    await message.channel.send(embed=embed)
 
         await self.bot.process_commands(message)
 
