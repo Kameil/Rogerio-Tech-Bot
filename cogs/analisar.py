@@ -57,7 +57,7 @@ class Analisar(commands.Cog):
             else:
                 await inter.followup.send("Nao foi possivel obter a imagem do perfil do usuario.")
         except Exception as e:
-            embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}```", color=discord.Color.red())
+            embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
             await inter.followup.send(embed=embed)
             print(f"Erro ao analisar usuario em: {inter.guild.name}")
 
