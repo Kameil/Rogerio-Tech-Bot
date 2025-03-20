@@ -41,6 +41,8 @@ async def on_ready():
     for file in os.listdir("cogs"):
         if file.endswith(".py"):
             await bot.load_extension(f"cogs.{file[:-3]}")
+    sync = await bot.tree.sync()
+    print(f"{len(sync)} comandos foram sincronizados.")
     print("Bot on.")
 
 bot.run(token)
