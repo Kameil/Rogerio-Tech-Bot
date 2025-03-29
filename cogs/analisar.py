@@ -14,6 +14,7 @@ class Analisar(commands.Cog):
         self.model = bot.model
         self.generation_config = bot.generation_config
         self.chats = bot.chats
+        self.httpClient = bot.httpclient
 
 
     @app_commands.command(name='analisar', description='descobrir se e desenrolado.')
@@ -39,12 +40,11 @@ class Analisar(commands.Cog):
             print(prompt_probot)
             prompt_probot += "\n".join(messages)
 
-            async with httpx.AsyncClient() as client:
-                response = await client.get(user.avatar.url)
-                if response.status_code == 200:
-                    avatar = response.content
-                else:
-                    avatar = None
+            response = await self.httpClient.get(user.avatar.url)
+            if response.status_code == 200:
+                avatar = response.content
+            else:
+                avatar = None
 
             if avatar:
                 response = self.model.generate_content(
