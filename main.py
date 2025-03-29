@@ -7,6 +7,8 @@ import discord
 from discord.ext import commands
 import os
 
+import httpx
+
 
 genai.configure(api_key=api_key)
 
@@ -28,11 +30,12 @@ generation_config = genai.GenerationConfig(
 
 chats = {}
 
-bot = commands.Bot('!!!!!!!!', help_command=None, intents=discord.Intents.all())
+bot = commands.Bot('r!', help_command=None, intents=discord.Intents.all())
 
 bot.chats = chats
 bot.model = model
-bot.generation_config = generation_config   
+bot.generation_config = generation_config 
+bot.httpclient = httpx.AsyncClient()
 
 
 

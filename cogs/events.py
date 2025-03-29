@@ -15,6 +15,7 @@ class Chat(commands.Cog):
         self.model = bot.model
         self.generation_config = bot.generation_config
         self.chats = bot.chats
+        self.httpClient = bot.httpclient
         
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -36,28 +37,25 @@ class Chat(commands.Cog):
                     async with message.channel.typing():
                         images = []
                         if message.attachments:
-                            async with httpx.AsyncClient() as client:
-                                for attachment in message.attachments:
-                                    if attachment.content_type.startswith("image/"):
-                                        response = await client.get(attachment.url)
-                                        image = base64.b64encode(response.content).decode("utf-8")
-                                        images.append({'mime_type': attachment.content_type, 'data': image})
+                            for attachment in message.attachments:
+                                if attachment.content_type.startswith("image/"):
+                                    response = await self.httpClient.get(attachment.url)
+                                    image = base64.b64encode(response.content).decode("utf-8")
+                                    images.append({'mime_type': attachment.content_type, 'data': image})
                                     if attachment.content_type == "application/pdf":
-                                        async with httpx.AsyncClient() as client:
-                                            for attachment in message.attachments:
-                                                response = await client.get(attachment.url)
-                                                response.raise_for_status()
+                                        for attachment in message.attachments:
+                                            response = await self.httpClient.get(attachment.url)
+                                            response.raise_for_status()
+                                            pdf_document = fitz.open(stream=response.content, filetype="pdf")
+                                            for page in pdf_document:
+                                                pixmap = page.get_pixmap()
+                                                # usando o PIllow para fazer essses paranaue ai
+                                                img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
 
-                                                pdf_document = fitz.open(stream=response.content, filetype="pdf")
-                                                for page in pdf_document:
-                                                    pixmap = page.get_pixmap()
-                                                    # usando o PIllow para fazer essses paranaue ai
-                                                    img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-
-                                                    img_buffer = BytesIO()
-                                                    img.save(img_buffer, format="PNG")
-                                                    b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-                                                    images.append({'mime_type': 'image/png', 'data': b64_encoded})
+                                                img_buffer = BytesIO()
+                                                img.save(img_buffer, format="PNG")
+                                                b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
+                                                images.append({'mime_type': 'image/png', 'data': b64_encoded})
                                         
 
                         if images:
