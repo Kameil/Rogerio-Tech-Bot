@@ -3,3 +3,4 @@ discord
 httpx
 tamga
 pymupdf
+pillow
