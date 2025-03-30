@@ -7,6 +7,8 @@ import base64
 import datetime
 import textwrap
 
+from google.genai import types
+
 
 class Analisar(commands.Cog):
     def __init__(self, bot):
@@ -14,6 +16,8 @@ class Analisar(commands.Cog):
         self.model = bot.model
         self.generation_config = bot.generation_config
         self.chats = bot.chats
+        self.httpClient = bot.httpclient
+        self.client = bot.client
 
 
     @app_commands.command(name='analisar', description='descobrir se e desenrolado.')
@@ -39,17 +43,17 @@ class Analisar(commands.Cog):
             print(prompt_probot)
             prompt_probot += "\n".join(messages)
 
-            async with httpx.AsyncClient() as client:
-                response = await client.get(user.avatar.url)
-                if response.status_code == 200:
-                    avatar = response.content
-                else:
-                    avatar = None
+            response = await self.httpClient.get(user.avatar.url)
+            if response.status_code == 200:
+                avatar = response.content
+            else:
+                avatar = None
 
             if avatar:
-                response = self.model.generate_content(
-                    [{'mime_type': 'image/png', 'data': base64.b64encode(avatar).decode("utf-8")}, prompt_probot],
-                    generation_config=self.generation_config
+                response = await self.client.aio.models.generate_content(
+                    contents = [prompt_probot, types.Part.from_bytes(data=avatar, mime_type="image/png")],
+                    config=self.generation_config,
+                    model=self.model
                 )
                 textos = textwrap.wrap(response.text, 2000)
                 for text in textos:

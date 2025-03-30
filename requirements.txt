@@ -3,3 +3,5 @@ discord
 httpx
 tamga
 pymupdf
+pillow
+google-genai
