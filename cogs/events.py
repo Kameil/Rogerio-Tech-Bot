@@ -84,9 +84,8 @@ class Chat(commands.Cog):
 
                     async for chunk in await chat.send_message_stream(message=prompt):
                         conteudo += chunk.text  
-                        if len(conteudo) >= 1900: # ajuste pq dava erro 429
+                        if len(conteudo) >= 1000: 
                             await message_enviada.edit(content=conteudo)
-                            conteudo= "" # reseta conteudo
                             await asyncio.sleep(1) 
                         else:
                             await message_enviada.edit(content=conteudo) 
