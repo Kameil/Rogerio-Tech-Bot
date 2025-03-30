@@ -12,7 +12,6 @@ import os
 import httpx
 
 client = geneai.Client(api_key=api_key)
-# genai.configure(api_key=api_key)
 
 SYSTEM_INSTRUCTION = """
 - Seu nome e Rogerio Tech.
@@ -23,7 +22,7 @@ voce ira receber mensagens assim: informacoes: mensagem de "nome do usuario": "c
 Voce deve responder o conteudo da mensagem.
 """
 
-# model = genai.GenerativeModel("gemini-2.0-flash", system_instruction=SYSTEM_INSTRUCTION)
+
 MODEL = "gemini-2.0-flash"
 
 generation_config = types.GenerateContentConfig(
@@ -55,3 +54,4 @@ async def on_ready():
     print("Bot on.")
 
 bot.run(token)
+
