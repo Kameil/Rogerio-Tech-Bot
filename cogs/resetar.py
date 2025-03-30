@@ -20,7 +20,7 @@ class Resetar(commands.Cog):
                     msgs = "undefined"
                 self.chats[channel_id] = self.model.start_chat()
                 embed = discord.Embed(title="Conversa resetada", description="A conversa com o bot foi resetada com sucesso.", color=discord.Color.green())
-                embed.set_footer(text=f"{msgs} mensagens foram apagadas.")
+                embed.set_footer(text=f"**{msgs}** mensagens foram apagadas.")
                 await inter.response.send_message(embed=embed)
 
             else:
