@@ -78,34 +78,32 @@ class Chat(commands.Cog):
 
                     if images:
                         prompt = [prompt] + images
-                    response = chat.send_message_stream(
-                        message=prompt,
-                    )
 
                     message_enviada = await message.reply("...", mention_author=False)
                     conteudo = ""  
 
                     async for chunk in await chat.send_message_stream(message=prompt):
                         conteudo += chunk.text  
-                        if len(conteudo) >= 1000: 
+                        if len(conteudo) >= 1900: # ajuste pq dava erro 429
                             await message_enviada.edit(content=conteudo)
-                            await asyncio.sleep(1.0) 
+                            conteudo= "" # reseta conteudo
+                            await asyncio.sleep(1) 
                         else:
                             await message_enviada.edit(content=conteudo) 
                     if conteudo:  
                         await message_enviada.edit(content=conteudo)
-                self.message_queue.task_done()
 
-                
+                self.message_queue.task_done()
                 self.processing = False
                 return
 
             except Exception as e:
+                if isinstance(e, discord.HTTPException) and e.status == 429: # se for 429 espera 2s pra n bugar
+                    await asyncio.sleep(2)
                 embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
                 await message.channel.send(embed=embed)
                 self.processing = False  
 
-            
             self.message_queue.task_done()
 
         await self.bot.process_commands(message)
