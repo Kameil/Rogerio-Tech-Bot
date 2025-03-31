@@ -98,11 +98,12 @@ class Chat(commands.Cog):
                 return
 
             except Exception as e:
+                self.processing = False
                 if isinstance(e, discord.HTTPException) and e.status == 429: # se for 429 espera 2s pra n bugar
                     await asyncio.sleep(2)
                 embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
                 await message.channel.send(embed=embed)
-                self.processing = False  
+                  
 
             self.message_queue.task_done()
 
