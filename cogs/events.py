@@ -24,7 +24,8 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if not message.author.bot:
+        rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+        if not message.author.bot and rogerioPermissoes.send_messages:
             channel_id = str(message.channel.id)
             if f"<@{self.bot.user.id}>" in message.content or isinstance(message.channel, discord.DMChannel) or self.bot.user in message.mentions:
                 await self.message_queue.put(message)
