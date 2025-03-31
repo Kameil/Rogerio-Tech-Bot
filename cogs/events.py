@@ -81,31 +81,41 @@ class Chat(commands.Cog):
                         prompt = [prompt] + images
 
                     message_enviada = await message.reply("...", mention_author=False)
-                    conteudo = ""  
+                    await asyncio.sleep(0.5)
+                    conteudo = ""
+                    mensagens_enviadas = [message_enviada]
 
                     async for chunk in await chat.send_message_stream(message=prompt):
-                        conteudo += chunk.text  
-                        if len(conteudo) >= 1000: 
-                            await message_enviada.edit(content=conteudo)
-                            await asyncio.sleep(1) 
+                        conteudo += chunk.text
+                        if len(conteudo) >= 1900:  
+                            await mensagens_enviadas[-1].edit(content=conteudo[:1900])
+                            await asyncio.sleep(0.5) 
+                            nova_mensagem = await message.channel.send("...")
+                            mensagens_enviadas.append(nova_mensagem)
+                            await asyncio.sleep(0.5) 
+                            conteudo = conteudo[1900:] 
                         else:
-                            await message_enviada.edit(content=conteudo) 
-                    if conteudo:  
-                        await message_enviada.edit(content=conteudo)
+                            await mensagens_enviadas[-1].edit(content=conteudo)
+                            await asyncio.sleep(0.2) 
 
+                    if conteudo:
+                        await mensagens_enviadas[-1].edit(content=conteudo)
+                        await asyncio.sleep(0.5)
                 self.message_queue.task_done()
                 self.processing = False
                 return
 
             except Exception as e:
                 self.processing = False
-                if isinstance(e, discord.HTTPException) and e.status == 429: # se for 429 espera 2s pra n bugar
-                    await asyncio.sleep(2)
-                embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
-                await message.channel.send(embed=embed)
-                  
+                if isinstance(e, discord.HTTPException) and e.status == 429:
+                    await asyncio.sleep(2) 
+                    embed = discord.Embed(title="Rate Limit Excedido", description="Aguarde um momento, estou enviando muitas mensagens rápido demais!", color=discord.Color.yellow())
+                    await message.channel.send(embed=embed)
+                else:
+                    embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
+                    await message.channel.send(embed=embed)
 
-            self.message_queue.task_done()
+                self.message_queue.task_done()
 
         await self.bot.process_commands(message)
 
