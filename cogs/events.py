@@ -98,7 +98,7 @@ class Chat(commands.Cog):
                             await mensagens_enviadas[-1].edit(content=conteudo)
                             await asyncio.sleep(1)
                         else:
-                            while len(conteudo) >= 1900:
+                            while len(conteudo) > 1900:
                                 await mensagens_enviadas[-1].edit(content=conteudo[:1900])
                                 await asyncio.sleep(1)
                                 nova_mensagem = await message.channel.send("...")
@@ -107,7 +107,15 @@ class Chat(commands.Cog):
                             await mensagens_enviadas[-1].edit(content=conteudo)
                             await asyncio.sleep(1)
 
-                    if conteudo:
+                    if conteudo and len(conteudo) <= 1900:
+                        await mensagens_enviadas[-1].edit(content=conteudo)
+                    elif conteudo:
+                        while len(conteudo) > 1900:
+                            await mensagens_enviadas[-1].edit(content=conteudo[:1900])
+                            await asyncio.sleep(1)
+                            nova_mensagem = await message.channel.send("...")
+                            mensagens_enviadas.append(nova_mensagem)
+                            conteudo = conteudo[1900:]
                         await mensagens_enviadas[-1].edit(content=conteudo)
 
                 self.message_queue.task_done()
