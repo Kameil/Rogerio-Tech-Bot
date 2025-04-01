@@ -62,5 +62,4 @@ O Rogério Tech Bot utiliza bibliotecas modernas (e algumas legadas) em **Python
 
 Gostou do projeto? Deixe uma estrela no repositório para apoiar o desenvolvimento!
 
-README criada por [g](ht
-tps://github.com/repudiar)
+README criada por [g](https://github.com/repudiar)
