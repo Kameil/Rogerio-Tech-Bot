@@ -29,8 +29,7 @@ class Chat(commands.Cog):
             channel_id = str(message.channel.id)
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
-                self.bot.user in message.mentions or 
-                message.reference):
+                self.bot.user in message.mentions):
                 await self.message_queue.put(message)
                 if not self.processing:
                     await self.process_queue()
