@@ -5,61 +5,76 @@
 </p>
 
 <div align="center">
-    <strong>AINDA EM DESENVOLVIMENTO.</strong>
+    <strong>🚧 AINDA EM DESENVOLVIMENTO 🚧</strong>
 </div>
 
 ---
 
-## Sobre o Rogério Tech
+## 📝 Sobre o Projeto
 
-O **Rogério Tech** é um bot que utiliza a API do Google para responder perguntas de forma inteligente, oferecendo funcionalidades adicionais e melhorias úteis. Ele foi projetado para interagir no **Discord**, automatizando tarefas e auxiliando os usuários com informações precisas.
-
----
-
-## 🚨 Atenção
-
-O **único** repositório oficial no GitHub é este. Qualquer outro pode não ser autêntico.
-
-Se você encontrar problemas ou quiser sugerir melhorias, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
+O **Rogério Tech** é um bot desenvolvido para o **Discord** que utiliza a API do Google para fornecer respostas inteligentes e funcionalidades úteis. Ele foi projetado para automatizar tarefas, responder perguntas e oferecer suporte aos usuários de forma eficiente e prática.
 
 ---
 
-## 📌 Perguntas Frequentes
+## ⚠️ Atenção
 
-### ❓ O bot é confiável?
-**Sim.** O código-fonte está disponível publicamente, permitindo que qualquer pessoa revise e verifique sua segurança. O bot também não exige permissões elevadas para funcionar.
+> [!CAUTION]  
+> O **único repositório oficial** é este: [Kameil/Rogerio-Tech-Bot](https://github.com/Kameil/Rogerio-Tech-Bot). Qualquer outro pode ser falso ou não confiável.
 
-### ❓ O bot é altamente desenvolvido?
-**Ainda não.** O Rogério Tech Bot é um projeto inicial, mas pode evoluir no futuro.
-
----
-
-## 🚀 Funcionalidades
-
-- 🤖 **Respostas Inteligentes:** Interage em tempo real com comandos e perguntas.
-- 🔍 **Pesquisa Avançada:** Obtém informações rapidamente a partir do seu banco de dados atualizado.
-- 📄 **Análise de Conteúdo:** Suporte para análise de perfis, posts, links e arquivos.
-- ⚙️ **Customização:** Permite adaptação às necessidades do usuário.
+Se você encontrar bugs ou tiver sugestões, por favor, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
 
 ---
 
-## 📖 Documentação
+## ✨ Funcionalidades
 
-Para aprender mais sobre a API do Google utilizada no projeto, consulte:
-
-- [Documentação 1 (Recomendada)](https://googleapis.github.io/python-genai/)
-- [Documentação 2](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
-
----
-
-## 🛠️ Tecnologia Utilizada
-
-O Rogério Tech Bot utiliza bibliotecas modernas (e algumas legadas) em **Python** para garantir seu funcionamento. Para ver todas as dependências, consulte o arquivo `requirements.txt`.
+- 🤖 **Respostas Inteligentes:** Interação em tempo real com comandos e perguntas dos usuários.  
+- 🔍 **Pesquisa Avançada:** Acesso rápido a informações atualizadas via API do Google.  
+- 📄 **Análise de Conteúdo:** Suporte para análise de perfis, posts, links e arquivos.  
+- ⚙️ **Customização:** Flexibilidade para adaptar o bot às suas necessidades.
 
 ---
 
-## ⭐ Contribuição
+## ❓ Perguntas Frequentes (FAQ)
 
-Gostou do projeto? Deixe uma estrela no repositório para apoiar o desenvolvimento!
+### O bot é confiável?  
+**Sim!** O código-fonte é público e pode ser revisado por qualquer pessoa. Além disso, o bot não exige permissões excessivas para funcionar.
 
-README criada por [g](https://github.com/repudiar)
+### O bot é altamente desenvolvido?  
+**Ainda não.** Este é um projeto em fase inicial, mas com potencial para crescer com o tempo e contribuições.
+
+---
+
+## 📚 Documentação
+
+Para entender melhor a API do Google integrada ao projeto, consulte:  
+- [Documentação Principal (Recomendada)](https://googleapis.github.io/python-genai/)  
+- [Guia Rápido da API Gemini](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
+
+---
+
+## 🛠️ Tecnologias Utilizadas
+
+O Rogério Tech é construído com **Python** e utiliza bibliotecas modernas (e algumas legadas). Veja todas as dependências no arquivo [`requirements.txt`](requirements.txt).
+
+---
+
+## 🚀 Como Contribuir
+
+1. Faça um fork deste repositório.  
+2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`).  
+3. Commit suas alterações (`git commit -m "adiciona nova funcionalidade"`).  
+4. Envie um pull request!
+
+Gostou do projeto? Dê uma ⭐ no repositório para apoiar o desenvolvimento!
+
+---
+
+## 📬 Suporte
+
+Problemas ou dúvidas? [Abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues) ou adicione um comentário ao commit que está com problema.
+
+---
+
+<div align="center">
+    README criado por <a href="https://github.com/repudiar">g</a> e aprimorado com ❤️
+</div>
