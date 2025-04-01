@@ -25,18 +25,22 @@ class Chat(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+
+        # verifica se o rogerio tem permissao de enviar mensagem
         if not message.author.bot and rogerioPermissoes.send_messages:
-            channel_id = str(message.channel.id)
+            # if para verificar se o rogerio deve responder ou nao
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
                 self.bot.user in message.mentions):
+                # se sim adiciona o discord.Message no queue
                 await self.message_queue.put(message)
                 if not self.processing:
                     await self.process_queue()
 
     async def process_queue(self):
         while not self.message_queue.empty():
-            message = await self.message_queue.get()
+            # especificar o tipo ne pra facilitar
+            message: discord.Message = await self.message_queue.get()
             channel_id = str(message.channel.id)
 
             try:
@@ -134,8 +138,7 @@ class Chat(commands.Cog):
                 self.processing = False
                 if not self.message_queue.empty():
                     await self.process_queue()
-
-        await self.bot.process_commands(message)
-
+        
+    
 async def setup(bot):
     await bot.add_cog(Chat(bot))
