@@ -1,57 +1,66 @@
-> [!CAUTION]
-> O **ÚNICO** repositório oficial no GitHub é este.
+# Rogério Tech
 
 <p align="center">
     <img src="https://i.imgur.com/TKphVxW.png" width="250" height="250">
 </p>
 
 <div align="center">
-
-AINDA EM DESENVOLVIMENTO.*
-
+    <strong>AINDA EM DESENVOLVIMENTO.</strong>
 </div>
 
 ---
 
-# Rogério Tech
+## Sobre o Rogério Tech
 
-O **Rogério Tech** é um bot que usa a API do google para responder suas perguntas, trazendo funcionalidades adicionais e melhorias úteis. Este bot é projetado para interagir de forma inteligente e automatizar tarefas.
-
-Está com algum problema ou precisa de ajuda? Se precisar de ajuda ou quiser sugerir algo, por favor [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
-
-Atualmente, Rogério Tech é suportado apenas no Discord. [SUJEITO A MUDANÇAS]
+O **Rogério Tech** é um bot que utiliza a API do Google para responder perguntas de forma inteligente, oferecendo funcionalidades adicionais e melhorias úteis. Ele foi projetado para interagir no **Discord**, automatizando tarefas e auxiliando os usuários com informações precisas.
 
 ---
 
-## Perguntas Frequentes
+## 🚨 Atenção
 
-**P: O Bot é confiável?**
+O **único** repositório oficial no GitHub é este. Qualquer outro pode não ser autêntico.
 
-**R:** Sim. O código-fonte está disponível aqui para todos verem, não é necessário permissões elevadas e seria impossível inserir algo malicioso no código sem que alguém percebesse.
-
-**P: O bot é profudamente desenvolvido?**
-
-**R:** Não. O Rogério Tech Bot apenas é um projeto básico que, quem sabe um dia vire algo maior.
+Se você encontrar problemas ou quiser sugerir melhorias, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
 
 ---
 
-## Funcionalidades
+## 📌 Perguntas Frequentes
+
+### ❓ O bot é confiável?
+**Sim.** O código-fonte está disponível publicamente, permitindo que qualquer pessoa revise e verifique sua segurança. O bot também não exige permissões elevadas para funcionar.
+
+### ❓ O bot é altamente desenvolvido?
+**Ainda não.** O Rogério Tech Bot é um projeto inicial, mas pode evoluir no futuro.
+
+---
+
+## 🚀 Funcionalidades
 
 - 🤖 **Respostas Inteligentes:** Interage em tempo real com comandos e perguntas.
-- 🔍 **Pesquisa Avançada:** Busca informações baseado no seu banco de dados, que por sua vez, é atualizado.
+- 🔍 **Pesquisa Avançada:** Obtém informações rapidamente a partir do seu banco de dados atualizado.
 - 📄 **Análise de Conteúdo:** Suporte para análise de perfis, posts, links e arquivos.
-- ⚙️ **Customização:** Adapte o bot às suas necessidades com facilidade.
+- ⚙️ **Customização:** Permite adaptação às necessidades do usuário.
 
 ---
 
-## Documentação
-Google
-- [Documentacao 1 (recomendada)](https://googleapis.github.io/python-genai/ "Documentacao 1 (recomendada)")
-- [Documentacao 2](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python "Documentacao 2")
+## 📖 Documentação
 
-## Código
-- O Rogério Tech Bot utiliza bibliotecas modernas(outras antigas) de Python para manter o seu funcionamento. Você sempre pode ver atráves dos arquivos de `requirements.txt`!
+Para aprender mais sobre a API do Google utilizada no projeto, consulte:
 
-**⭐ Gostou do projeto? Deixe uma estrela no repositório! ⭐**
+- [Documentação 1 (Recomendada)](https://googleapis.github.io/python-genai/)
+- [Documentação 2](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
+
 ---
-README criada por [g](https://github.com/repudiar)
+
+## 🛠️ Tecnologia Utilizada
+
+O Rogério Tech Bot utiliza bibliotecas modernas (e algumas legadas) em **Python** para garantir seu funcionamento. Para ver todas as dependências, consulte o arquivo `requirements.txt`.
+
+---
+
+## ⭐ Contribuição
+
+Gostou do projeto? Deixe uma estrela no repositório para apoiar o desenvolvimento!
+
+README criada por [g](ht
+tps://github.com/repudiar)
