@@ -79,5 +79,7 @@ Convide o Rogério Tech para o seu servidor:
 ---
 
 <div align="center">
-    README criado por <a href="https://github.com/repudiar">g</a> e aprimorado com ❤️
+  Bot criado com ❤️ por 
+  <a href="https://github.com/Kameil"><strong>Kameil</strong></a> (ideia & dev) e 
+  <a href="https://github.com/cafewhaze"><strong>g</strong></a> (ajustes & README)
 </div>
