@@ -18,8 +18,8 @@ class Chat(commands.Cog):
         self.generation_config = bot.generation_config
         self.chats = bot.chats
         self.httpClient = bot.httpclient
-        self.processing = False
-        self.message_queue = Queue()
+        self.processing = {}
+        self.message_queue = {}
         self.client = bot.client
 
     @commands.Cog.listener()
@@ -30,17 +30,20 @@ class Chat(commands.Cog):
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
                 self.bot.user in message.mentions):
-                await self.message_queue.put(message)
-                if not self.processing:
-                    await self.process_queue()
+                if self.message_queue.get(channel_id) is None:
+                    self.message_queue[channel_id] = Queue()
+                await self.message_queue[channel_id].put(message)
+                if not self.processing.get(channel_id, False):
+                    self.processing[channel_id] = True
+                    await self.process_queue(channel_id)
 
-    async def process_queue(self):
-        while not self.message_queue.empty():
-            message = await self.message_queue.get()
+    async def process_queue(self, channel_id: str):
+        while not self.message_queue[channel_id].empty():
+            message: discord.Message = await self.message_queue[channel_id].get()
             channel_id = str(message.channel.id)
 
             try:
-                self.processing = True
+                self.processing[channel_id] = True
 
                 if channel_id not in self.chats:
                     self.chats[channel_id] = self.client.aio.chats.create(model=self.model, config=self.generation_config)
@@ -117,9 +120,11 @@ class Chat(commands.Cog):
                             conteudo = conteudo[1900:]
                         await mensagens_enviadas[-1].edit(content=conteudo)
 
-                self.message_queue.task_done()
+                    self.message_queue[channel_id].task_done()
 
             except Exception as e:
+                self.processing[channel_id] = True
+                self.message_queue[channel_id].task_done()
                 if isinstance(e, discord.HTTPException) and e.status == 429:
                     await asyncio.sleep(2)
                     embed = discord.Embed(title="Rate Limit Excedido", description="Aguarde um momento, estou enviando muitas mensagens rápido demais!", color=discord.Color.yellow())
@@ -128,14 +133,12 @@ class Chat(commands.Cog):
                     embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
                     await message.channel.send(embed=embed)
 
-                self.message_queue.task_done()
+                
 
             finally:
-                self.processing = False
-                if not self.message_queue.empty():
-                    await self.process_queue()
-
-        await self.bot.process_commands(message)
+                self.processing[channel_id] = False
+                if not self.message_queue[channel_id].empty():
+                    await self.process_queue(channel_id)
 
 async def setup(bot):
     await bot.add_cog(Chat(bot))
