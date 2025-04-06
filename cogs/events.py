@@ -123,7 +123,6 @@ class Chat(commands.Cog):
                     self.message_queue[channel_id].task_done()
 
             except Exception as e:
-                self.processing[channel_id] = True
                 self.message_queue[channel_id].task_done()
                 if isinstance(e, discord.HTTPException) and e.status == 429:
                     await asyncio.sleep(2)
