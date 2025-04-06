@@ -56,7 +56,7 @@ class Chat(commands.Cog):
                     else:
                         referenced_content = f" (em resposta a: '{referenced_message.content}' de {referenced_message.author.name})"
 
-                prompt = f'Informaçoes: Mensagem de "{message.author.name}"'
+                prompt = f'Informaçoes: Mensagem de "{message.author.display_name}"'
                 if atividades:
                     prompt += f", ativo agora em: discord(aqui), {', '.join(atividades)}"
                 prompt += f": {message.content.replace(f'<@{self.bot.user.id}>', 'Rogerio Tech')}{referenced_content}"
