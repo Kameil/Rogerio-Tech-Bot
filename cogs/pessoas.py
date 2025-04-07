@@ -14,14 +14,15 @@ class Pessoas(commands.Cog):
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
 
-            self.add_item(discord.ui.TextInput(label="Nome", placeholder="Digite o nome completo"))
+            self.add_item(discord.ui.TextInput(label="Nome", style=discord.TextStyle.short, placeholder="Digite o nome"))
             self.add_item(discord.ui.TextInput(label="Descrição", style=discord.TextStyle.long, placeholder="Digite a descrição"))
 
-        async def callback(self, interaction: discord.Interaction):
+
+        async def on_submit(self, interaction: discord.Interaction):
             try:
                 # pega os valores do modal
-                nome = self.children[0].value
-                descricao = self.children[1].value
+                nome: str = self.children[0].value
+                descricao: str = self.children[1].value
 
                 # verifica se o nome está vazio
                 if not nome or not nome.strip():
@@ -62,13 +63,28 @@ class Pessoas(commands.Cog):
                         )
                         await interaction_select.response.send_message(embed=embed, ephemeral=False)
 
-                select.callback = select_callback
-                view = discord.ui.View()
-                view.add_item(select)
+                class Composto(discord.ui.View):
+                    @discord.ui.select( # the decorator that lets you specify the properties of the select menu
+                        placeholder = "E nome composto?", # the placeholder text that will be displayed if nothing is selected
+                        min_values = 1, # the minimum number of values that must be selected by the users
+                        max_values = 1, # the maximum number of values that can be selected by the users
+                        options = [ # the list of options from which users can choose, a required field
+                            discord.SelectOption(
+                                label="Vanilla",
+                                description="Sim para nome composto ex: Joao victor"
+                            ),
+                            discord.SelectOption(
+                                label="Chocolate",
+                                description="Nao para nome nao composto ex: Joao"
+                            ),
+                        ]
+                    )
+                    async def select_callback(self, select, interaction: discord.Interaction): # the function called when the user is done selecting options
+                        await interaction.response.send_message(f"Awesome! I like {select.values[0]} too!")
 
                 await interaction.response.send_message(
                     "Por favor, escolha se o nome é composto:", 
-                    view=view, 
+                    view=Composto(), 
                     ephemeral=True
                 )
 
