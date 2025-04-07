@@ -10,18 +10,28 @@ class Pessoas(commands.Cog):
         self.chats = bot.chats
         self.client = bot.client
 
-    @app_commands.command(name='pessoas', description='Adicionar uma pessoa com nome e descrição.')
+    @app_commands.command(name='pessoas', description='Adicionar uma pessoa com nome completo e descrição.')
     @app_commands.describe(
-        nome='O nome da pessoa',
-        descricao='A descrição da pessoa'
+        nome='O nome completo da pessoa',
+        descricao='A descrição da pessoa',
+        composto='O nome é composto?'
     )
-    async def pessoas(self, inter: discord.Interaction, nome: str, descricao: str):
+    @app_commands.choices(
+        composto=[
+            app_commands.Choice(name="Sim", value="sim"),
+            app_commands.Choice(name="Não", value="nao")
+        ]
+    )
+    async def pessoas(self, inter: discord.Interaction, nome: str, descricao: str, composto: str):
         try:
             await inter.response.defer()
             # divide a string 'nome' em uma lista de palavras
             nomes = nome.split()
-            # pega os dois primeiros nomes, se existirem. Se não existirem, pega o primeiro nome.
-            nome_exibido = " ".join(nomes[:2]) if len(nomes) > 1 else nomes[0]
+            # define o nome exibido com base na escolha de 'composto'
+            if composto == "sim" and len(nomes) >= 2:
+                nome_exibido = f"{nomes[0]} {nomes[1]}"
+            else:
+                nome_exibido = nomes[0]
             
             embed = discord.Embed(
                 title="Sucesso!",
