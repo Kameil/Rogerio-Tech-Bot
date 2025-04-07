@@ -18,12 +18,14 @@ class Pessoas(commands.Cog):
     async def pessoas(self, inter: discord.Interaction, nome: str, descricao: str):
         try:
             await inter.response.defer()
-            # pega o primeiro nome da string 'nome'
-            primeiro_nome = nome.split()[0]
+            # divide a string 'nome' em uma lista de palavras
+            nomes = nome.split()
+            # pega os dois primeiros nomes, se existirem. Se não existirem, pega o primeiro nome.
+            nome_exibido = " ".join(nomes[:2]) if len(nomes) > 1 else nomes[0]
             
             embed = discord.Embed(
                 title="Sucesso!",
-                description=f"**{primeiro_nome.capitalize()}** foi adicionado(a) com êxito.",
+                description=f"**{nome_exibido.capitalize()}** foi adicionado(a) com êxito.",
                 color=discord.Color.green()
             )
             
