@@ -24,7 +24,7 @@ class Pessoas(commands.Cog):
     )
     async def pessoas(self, inter: discord.Interaction, nome: str, descricao: str, composto: str):
         try:
-            await inter.response.defer()
+            await inter.response.defer(ephemeral=True)
             # divide a string 'nome' em uma lista de palavras
             nomes = nome.split()
             # define o nome exibido com base na escolha de 'composto'
@@ -39,7 +39,7 @@ class Pessoas(commands.Cog):
                 color=discord.Color.green()
             )
             
-            await inter.followup.send(embed=embed)
+            await inter.followup.send(embed=embed, ephemeral=True)
             
         except Exception as e:
             embed = discord.Embed(
