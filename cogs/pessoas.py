@@ -48,6 +48,21 @@ class Pessoas(commands.Cog):
                 color=discord.Color.red()
             )
             await inter.followup.send(embed=embed)
+    class MyModal(discord.ui.Modal):
+        def __init__(self, *args, **kwargs) -> None:
+            super().__init__(*args, **kwargs)
+
+            self.add_item(discord.ui.TextInput(label="Nome"))
+            self.add_item(discord.ui.TextInput(label="Descricao", style=discord.TextStyle.long))
+
+        async def callback(self, interaction: discord.Interaction):
+            embed = discord.Embed(title="tendeu")
+            embed.add_field(name="nome", value=self.children[0].value)
+            embed.add_field(name="descricao", value=self.children[1].value)
+            await interaction.response.send_message(embeds=[embed])
+    @app_commands.command(name="pessoas_beta", description="adiciona pessoa ai tendeu")
+    async def pessoas_beta(self, inter: discord.Interaction):
+        await inter.response.send_modal(self.MyModal(title="Pessoas Beta"))
 
 async def setup(bot):
     await bot.add_cog(Pessoas(bot))
