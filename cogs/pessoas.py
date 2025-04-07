@@ -14,33 +14,64 @@ class Pessoas(commands.Cog):
         def __init__(self, *args, **kwargs) -> None:
             super().__init__(*args, **kwargs)
 
-            self.add_item(discord.ui.TextInput(label="Nome", placeholder="Digite o nome da pessoa"))
+            self.add_item(discord.ui.TextInput(label="Nome", placeholder="Digite o nome completo"))
             self.add_item(discord.ui.TextInput(label="Descrição", style=discord.TextStyle.long, placeholder="Digite a descrição"))
-            self.add_item(discord.ui.TextInput(label="Composto? (sim/não)", placeholder="Digite 'sim' ou 'não'"))
 
         async def callback(self, interaction: discord.Interaction):
             try:
-                # pega os valores do modal
+                # Pega os valores do modal
                 nome = self.children[0].value
-                composto = self.children[2].value.lower()
-                
-                # divide o nome em uma lista de palavras
-                nomes = nome.split()
-                
-                # define o nome exibido com base na escolha de 'composto'
-                if composto == "sim" and len(nomes) >= 2:
-                    nome_exibido = f"{nomes[0]} {nomes[1]}"
-                else:
-                    nome_exibido = nomes[0]
-                
-                # cria o embed de sucesso
-                embed = discord.Embed(
-                    title="Sucesso!",
-                    description=f"**{nome_exibido.capitalize()}** foi adicionado(a) com êxito.",
-                    color=discord.Color.green()
+                descricao = self.children[1].value
+
+                # Verifica se o nome está vazio
+                if not nome or not nome.strip():
+                    raise ValueError("O campo 'Nome' não pode estar vazio!")
+
+                # Cria o menu de seleção
+                select = discord.ui.Select(
+                    placeholder="O nome é composto?",
+                    options=[
+                        discord.SelectOption(label="Sim", value="sim"),
+                        discord.SelectOption(label="Não", value="nao")
+                    ]
                 )
-                await interaction.response.send_message(embed=embed, ephemeral=True)
-                
+
+                async def select_callback(interaction_select: discord.Interaction):
+                    try:
+                        composto = select.values[0]  # Pega a escolha do usuário
+                        nomes = nome.split()
+
+                        # Define o nome exibido com base na escolha
+                        if composto == "sim" and len(nomes) >= 2:
+                            nome_exibido = f"{nomes[0]} {nomes[1]}"
+                        else:
+                            nome_exibido = nomes[0]
+
+                        embed = discord.Embed(
+                            title="Sucesso!",
+                            description=f"**{nome_exibido.capitalize()}** foi adicionado(a) com êxito.",
+                            color=discord.Color.green()
+                        )
+                        await interaction_select.response.send_message(embed=embed, ephemeral=True)
+
+                    except Exception as e:
+                        embed = discord.Embed(
+                            title="Ocorreu Um Erro!",
+                            description=f"\n```py\n{str(e)}\n```",
+                            color=discord.Color.red()
+                        )
+                        await interaction_select.response.send_message(embed=embed, ephemeral=False)
+
+                select.callback = select_callback
+                view = discord.ui.View()
+                view.add_item(select)
+
+                await interaction.response.send_message(
+                    "Por favor, escolha se o nome é composto:", 
+                    view=view, 
+                    ephemeral=True
+                )
+
             except Exception as e:
                 embed = discord.Embed(
                     title="Ocorreu Um Erro!",
