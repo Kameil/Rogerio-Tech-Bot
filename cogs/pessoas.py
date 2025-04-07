@@ -19,15 +19,15 @@ class Pessoas(commands.Cog):
 
         async def callback(self, interaction: discord.Interaction):
             try:
-                # Pega os valores do modal
+                # pega os valores do modal
                 nome = self.children[0].value
                 descricao = self.children[1].value
 
-                # Verifica se o nome está vazio
+                # verifica se o nome está vazio
                 if not nome or not nome.strip():
                     raise ValueError("O campo 'Nome' não pode estar vazio!")
 
-                # Cria o menu de seleção
+                #cria o menu de seleção
                 select = discord.ui.Select(
                     placeholder="O nome é composto?",
                     options=[
@@ -38,10 +38,10 @@ class Pessoas(commands.Cog):
 
                 async def select_callback(interaction_select: discord.Interaction):
                     try:
-                        composto = select.values[0]  # Pega a escolha do usuário
+                        composto = select.values[0]  # pega a escolha do usuário
                         nomes = nome.split()
 
-                        # Define o nome exibido com base na escolha
+                        # define o nome exibido com base na escolha
                         if composto == "sim" and len(nomes) >= 2:
                             nome_exibido = f"{nomes[0]} {nomes[1]}"
                         else:
