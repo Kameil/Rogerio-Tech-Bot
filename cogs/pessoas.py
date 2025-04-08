@@ -19,15 +19,12 @@ class Pessoas(commands.Cog):
 
         async def on_submit(self, interaction: discord.Interaction):
             try:
-                # Pega os valores do modal
                 nome: str = self.children[0].value
                 descricao: str = self.children[1].value
 
-                # Verifica se o nome está vazio
                 if not nome or not nome.strip():
                     raise ValueError("'Nome' não pode estar vazio.")
 
-                # Cria o menu de seleção
                 select = discord.ui.Select(
                     placeholder="O nome da pessoa é composto?",
                     min_values=1,
@@ -40,20 +37,19 @@ class Pessoas(commands.Cog):
 
                 async def select_callback(interaction_select: discord.Interaction):
                     try:
-                        composto = select.values[0]  # Pega a escolha do usuário
+                        composto = select.values[0]
                         nomes = nome.split()
 
-                        # Define o nome exibido com base na escolha
                         if composto == "sim" and len(nomes) >= 2:
                             nome_exibido = f"{nomes[0]} {nomes[1]}"
                         else:
                             nome_exibido = nomes[0]
 
                         embed = discord.Embed(
-                            description=f"Adicionado **{nome_exibido.capitalize()}** com êxito.",
+                            description=f"Adicionado(a) **{nome_exibido.capitalize()}** com êxito. Braaabo!",
                             color=discord.Color.green()
                         )
-                        await interaction_select.response.send_message(embed=embed, ephemeral=True)
+                        await interaction_select.response.send_message(embed=embed, ephemeral=False)
 
                     except Exception as e:
                         embed = discord.Embed(
