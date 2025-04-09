@@ -25,9 +25,7 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        # verifica se a mensagem foi enviada em um servidor (não em DM)
         if message.guild is None:
-            # se for dm, verifica permissões diretamente no canal
             rogerioPermissoes = message.channel.permissions_for(self.bot.user)
         else:
             rogerioPermissoes = message.channel.permissions_for(message.guild.me)
