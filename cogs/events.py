@@ -24,8 +24,10 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        # verifica se a mensagem foi enviada em um servidor (não em DM)
         if message.guild is None:
-            rogerioPermissoes = True
+            # se for dm, verifica permissões diretamente no canal
+            rogerioPermissoes = message.channel.permissions_for(self.bot.user)
         else:
             # se for em um servidor, usa message.guild.me
             rogerioPermissoes = message.channel.permissions_for(message.guild.me)
@@ -100,7 +102,6 @@ class Chat(commands.Cog):
                     mensagens_enviadas = [message_enviada]
 
                     async for chunk in await chat.send_message_stream(message=prompt):
-                        print(chunk.text, end="")
                         conteudo += chunk.text
                         if len(conteudo) <= 1000:
                             await mensagens_enviadas[-1].edit(content=conteudo)
