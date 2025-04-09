@@ -26,7 +26,7 @@ class Chat(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if message.guild is None:
-            rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+            rogerioPermissoes = True
         else:
             rogerioPermissoes = message.channel.permissions_for(message.guild.me)
 
@@ -98,6 +98,7 @@ class Chat(commands.Cog):
                     # coleta todo o conteúdo antes de enviar
                     conteudo = ""
                     async for chunk in await chat.send_message_stream(message=prompt):
+                        print(chunk.text, end="")
                         conteudo += chunk.text
 
                     # divide o conteúdo se necessário usando textwrap
