@@ -105,12 +105,35 @@ class Chat(commands.Cog):
 
                     _response = await chat.send_message(message=prompt)
 
-                    _responseDividida = textwrap.fill(_response.text, width=1900, break_long_words=False).split('\n')
+                # dividir tb
+                def split_message(text, max_length=1900):
+                    lines = text.split('\n')  # dividir p quebrar a linha
+                    messages = []
+                    current_message = ""
+                    
+                    for line in lines:
+                        # veriica se passou o limite
+                        if len(current_message) + len(line) + 1 <= max_length:
+                            current_message += line + '\n'
+                        else:
+                            # se a msg n tiver vazia adiciona a lista
+                            if current_message:
+                                messages.append(current_message.rstrip('\n'))
+                            # inicia  aconversa na linha atual
+                            current_message = line + '\n'
+                    
+                    # add a ultima mensagem, se tiver
+                    if current_message:
+                        messages.append(current_message.rstrip('\n'))
+                    
+                    return messages
 
-                    for _m in _responseDividida:
-                        mensagem_enviada = await message.reply(_m, mention_author=False)
+                _responseDividida = split_message(_response.text)
 
-                    self.message_queue[channel_id].task_done()
+                for _m in _responseDividida:
+                    mensagem_enviada = await message.reply(_m, mention_author=False)
+
+                self.message_queue[channel_id].task_done()
 
             except Exception as e:
                 self.message_queue[channel_id].task_done()
