@@ -77,6 +77,7 @@ class Analisar(commands.Cog):
             self.prompt = prompt
             self.mpc = mpc
             self.janalisado = False
+            self.author = author
 
         @discord.ui.button(label="Re:Analisar", style=discord.ButtonStyle.secondary)
         async def analisar(self, interaction: discord.Interaction, button: discord.ui.Button):
