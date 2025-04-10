@@ -101,23 +101,14 @@ class Chat(commands.Cog):
                     if images:
                         prompt = [prompt] + images
 
-                    # coleta todo o conteúdo antes de enviar
-                    conteudo = ""
-                    async for chunk in await chat.send_message_stream(message=prompt):
-                        conteudo += chunk.text
+                    # fodase o stream 
 
-                    # divide o conteúdo se necessário usando textwrap
-                    if len(conteudo) > 1900:
-                        partes = textwrap.fill(conteudo, width=1900, break_long_words=False).split('\n')
-                    else:
-                        partes = [conteudo]
+                    _response = await chat.send_message(message=prompt)
 
-                    # envia a primeira mensagem
-                    mensagem_enviada = await message.reply(partes[0], mention_author=False)
+                    _responseDividida = textwrap.fill(_response.text, width=1900, break_long_words=False).split('\n')
 
-                    # envia as partes adicionais, se houver
-                    for parte in partes[1:]:
-                        mensagem_enviada = await message.channel.send(parte)
+                    for _m in _responseDividida:
+                        mensagem_enviada = await message.reply(_m, mention_author=False)
 
                     self.message_queue[channel_id].task_done()
 
