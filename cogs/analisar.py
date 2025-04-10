@@ -83,7 +83,7 @@ class Analisar(commands.Cog):
         async def analisar(self, interaction: discord.Interaction, button: discord.ui.Button):
             if not interaction.user.id == self.author:
                 return await interaction.response.send_message("Apenas o usuario que executou o comando pode usar esse botao.", ephemeral=True)
-            if not self.janalisado:
+            elif not self.janalisado:
                 await self.bot.get_cog("Analisar")._executar_analise(interaction, self.user, self.prompt, self.mpc, janalisado=True)
                 self.janalisado = True
             else:
