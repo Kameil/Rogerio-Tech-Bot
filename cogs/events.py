@@ -8,6 +8,7 @@ from PIL import Image
 from io import BytesIO
 import asyncio
 from asyncio import Queue
+import textwrap
 
 from google.genai import types
 
@@ -24,7 +25,11 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+        if message.guild is None:
+            rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+        else:
+            rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+
         if not message.author.bot and rogerioPermissoes.send_messages:
             channel_id = str(message.channel.id)
             if (f"<@{self.bot.user.id}>" in message.content or 
@@ -90,35 +95,23 @@ class Chat(commands.Cog):
                     if images:
                         prompt = [prompt] + images
 
-                    message_enviada = await message.reply("...", mention_author=False)
+                    # coleta todo o conteúdo antes de enviar
                     conteudo = ""
-                    mensagens_enviadas = [message_enviada]
-
                     async for chunk in await chat.send_message_stream(message=prompt):
                         conteudo += chunk.text
-                        if len(conteudo) <= 1000:
-                            await mensagens_enviadas[-1].edit(content=conteudo)
-                            await asyncio.sleep(1)
-                        else:
-                            while len(conteudo) > 1900:
-                                await mensagens_enviadas[-1].edit(content=conteudo[:1900])
-                                await asyncio.sleep(1)
-                                nova_mensagem = await message.channel.send("...")
-                                mensagens_enviadas.append(nova_mensagem)
-                                conteudo = conteudo[1900:]
-                            await mensagens_enviadas[-1].edit(content=conteudo)
-                            await asyncio.sleep(1)
 
-                    if conteudo and len(conteudo) <= 1900:
-                        await mensagens_enviadas[-1].edit(content=conteudo)
-                    elif conteudo:
-                        while len(conteudo) > 1900:
-                            await mensagens_enviadas[-1].edit(content=conteudo[:1900])
-                            await asyncio.sleep(1)
-                            nova_mensagem = await message.channel.send("...")
-                            mensagens_enviadas.append(nova_mensagem)
-                            conteudo = conteudo[1900:]
-                        await mensagens_enviadas[-1].edit(content=conteudo)
+                    # divide o conteúdo se necessário usando textwrap
+                    if len(conteudo) > 1900:
+                        partes = textwrap.fill(conteudo, width=1900, break_long_words=False).split('\n')
+                    else:
+                        partes = [conteudo]
+
+                    # envia a primeira mensagem
+                    mensagem_enviada = await message.reply(partes[0], mention_author=False)
+
+                    # envia as partes adicionais, se houver
+                    for parte in partes[1:]:
+                        mensagem_enviada = await message.channel.send(parte)
 
                     self.message_queue[channel_id].task_done()
 
@@ -131,8 +124,6 @@ class Chat(commands.Cog):
                 else:
                     embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
                     await message.channel.send(embed=embed)
-
-                
 
             finally:
                 self.processing[channel_id] = False
