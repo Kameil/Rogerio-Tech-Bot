@@ -25,19 +25,25 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.guild is None:
-            rogerioPermissoes = message.channel.permissions_for(self.bot.user)
-        else:
-            rogerioPermissoes = message.channel.permissions_for(message.guild.me)
 
-        if not message.author.bot and rogerioPermissoes.send_messages:
+        if not message.flags.ephemeral and not message.author.bot:
+
+            if message.guild is None:
+                rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+            else:
+                rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+
             channel_id = str(message.channel.id)
+
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
-                self.bot.user in message.mentions):
+                self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
+
                 if self.message_queue.get(channel_id) is None:
                     self.message_queue[channel_id] = Queue()
+
                 await self.message_queue[channel_id].put(message)
+
                 if not self.processing.get(channel_id, False):
                     self.processing[channel_id] = True
                     await self.process_queue(channel_id)
@@ -95,25 +101,39 @@ class Chat(commands.Cog):
                     if images:
                         prompt = [prompt] + images
 
-                    # coleta todo o conteúdo antes de enviar
-                    conteudo = ""
-                    async for chunk in await chat.send_message_stream(message=prompt):
-                        conteudo += chunk.text
+                    # fodase o stream 
 
-                    # divide o conteúdo se necessário usando textwrap
-                    if len(conteudo) > 1900:
-                        partes = textwrap.fill(conteudo, width=1900, break_long_words=False).split('\n')
-                    else:
-                        partes = [conteudo]
+                    _response = await chat.send_message(message=prompt)
 
-                    # envia a primeira mensagem
-                    mensagem_enviada = await message.reply(partes[0], mention_author=False)
+                # dividir tb
+                def split_message(text, max_length=1900):
+                    lines = text.split('\n')  # dividir p quebrar a linha
+                    messages = []
+                    current_message = ""
+                    
+                    for line in lines:
+                        # veriica se passou o limite
+                        if len(current_message) + len(line) + 1 <= max_length:
+                            current_message += line + '\n'
+                        else:
+                            # se a msg n tiver vazia adiciona a lista
+                            if current_message:
+                                messages.append(current_message.rstrip('\n'))
+                            # inicia  aconversa na linha atual
+                            current_message = line + '\n'
+                    
+                    # add a ultima mensagem, se tiver
+                    if current_message:
+                        messages.append(current_message.rstrip('\n'))
+                    
+                    return messages
 
-                    # envia as partes adicionais, se houver
-                    for parte in partes[1:]:
-                        mensagem_enviada = await message.channel.send(parte)
+                _responseDividida = split_message(_response.text)
 
-                    self.message_queue[channel_id].task_done()
+                for _m in _responseDividida:
+                    mensagem_enviada = await message.reply(_m, mention_author=False)
+
+                self.message_queue[channel_id].task_done()
 
             except Exception as e:
                 self.message_queue[channel_id].task_done()
