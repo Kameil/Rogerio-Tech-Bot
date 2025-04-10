@@ -19,10 +19,8 @@ class Analisar(commands.Cog):
         self.httpClient = bot.httpclient
         self.client = bot.client
 
-
-    @app_commands.command(name='analisar', description='descobrir se e desenrolado.')
-    @app_commands.describe(user="Usuario a ser analisado", mpc="Mensagens por canal. Padrao:100", prompt="Analise + prompt | nome do usuario + mensagens do usuario")    
-    async def Jokenpo(self, inter: discord.Interaction, user: discord.User, prompt: str=None, mpc: int=100):
+        
+    async def _executar_analise(self, inter: discord.Interaction, user, prompt=None, mpc=100, janalisado=False):
         await inter.response.defer()
         if isinstance(inter.channel, discord.DMChannel):
             return await inter.followup.send("Esse comando so pode ser executado em um servidor.")
@@ -57,13 +55,50 @@ class Analisar(commands.Cog):
                 )
                 textos = textwrap.wrap(response.text, 2000)
                 for text in textos:
-                    await inter.followup.send(text)
+                    if text == textos[-1] and janalisado is False:
+                        await inter.followup.send(text, view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id))
+                    else:
+                        await inter.followup.send(text)
+
             else:
                 await inter.followup.send("Nao foi possivel obter a imagem do perfil do usuario.")
         except Exception as e:
             embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
-            await inter.followup.send(embed=embed)
+            await inter.followup.send(embed=embed, view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id))
             print(f"Erro ao analisar usuario em: {inter.guild.name}")
+
+
+
+    class Botoes(discord.ui.View):
+        def __init__(self, bot, user, prompt, mpc, author=None):
+            super().__init__(timeout=60)
+            self.bot = bot
+            self.user = user
+            self.prompt = prompt
+            self.mpc = mpc
+            self.janalisado = False
+            self.author = author
+
+        @discord.ui.button(label="Re:Analisar", style=discord.ButtonStyle.secondary)
+        async def analisar(self, interaction: discord.Interaction, button: discord.ui.Button):
+            if not interaction.user.id == self.author:
+                return await interaction.response.send_message("Apenas o usuario que executou o comando pode usar esse botao.", ephemeral=True)
+            elif not self.janalisado:
+                await self.bot.get_cog("Analisar")._executar_analise(interaction, self.user, self.prompt, self.mpc, janalisado=True)
+                self.janalisado = True
+            else:
+                await interaction.response.send_message("Usuario ja analisado.", ephemeral=True)
+    
+
+    
+
+    @app_commands.command(name='analisar', description='descobrir se e desenrolado.')
+    @app_commands.describe(user="Usuario a ser analisado", mpc="Mensagens por canal. Padrao:100", prompt="Analise + prompt | nome do usuario + mensagens do usuario")    
+    async def Jokenpo(self, inter: discord.Interaction, user: discord.User, prompt: str=None, mpc: int=100):
+        await self._executar_analise(inter, user, prompt, mpc)
+        
+    
+    
 
 async def setup(bot):
     await bot.add_cog(Analisar(bot))

@@ -25,19 +25,25 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if message.guild is None:
-            rogerioPermissoes = message.channel.permissions_for(self.bot.user)
-        else:
-            rogerioPermissoes = message.channel.permissions_for(message.guild.me)
 
-        if not message.author.bot and rogerioPermissoes.send_messages:
+        if not message.flags.ephemeral and not message.author.bot:
+
+            if message.guild is None:
+                rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+            else:
+                rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+
             channel_id = str(message.channel.id)
+
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
-                self.bot.user in message.mentions):
+                self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
+
                 if self.message_queue.get(channel_id) is None:
                     self.message_queue[channel_id] = Queue()
+
                 await self.message_queue[channel_id].put(message)
+
                 if not self.processing.get(channel_id, False):
                     self.processing[channel_id] = True
                     await self.process_queue(channel_id)
