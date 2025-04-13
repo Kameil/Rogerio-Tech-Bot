@@ -84,8 +84,8 @@ class Analisar(commands.Cog):
             if not interaction.user.id == self.author:
                 return await interaction.response.send_message("Apenas o usuario que executou o comando pode usar esse botao.", ephemeral=True)
             elif not self.janalisado:
-                await self.bot.get_cog("Analisar")._executar_analise(interaction, self.user, self.prompt, self.mpc, janalisado=True)
                 self.janalisado = True
+                await self.bot.get_cog("Analisar")._executar_analise(interaction, self.user, self.prompt, self.mpc, janalisado=True)
             else:
                 await interaction.response.send_message("Usuario ja analisado.", ephemeral=True)
     
