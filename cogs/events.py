@@ -77,8 +77,10 @@ class Chat(commands.Cog):
 
                 async with message.channel.typing():
                     images = []
+                    text_file_content = None
                     if message.attachments:
                         for attachment in message.attachments:
+                            print(f"Anexo detectado: {attachment.filename}, Tipo: {attachment.content_type}")  # log temp
                             if attachment.content_type.startswith("image/"):
                                 response = await self.httpClient.get(attachment.url)
                                 response.raise_for_status()
@@ -97,13 +99,26 @@ class Chat(commands.Cog):
                                 #         b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
                                 #         images.append({'mime_type': 'image/png', 'data': b64_encoded})
                                 raise("Leitor de pdf desativado por enquanto.")
+                            elif attachment.content_type.startswith("text/plain"): 
+                                response = await self.httpClient.get(attachment.url)
+                                response.raise_for_status()
+                                try:
+                                    text_file_content = response.content.decode('utf-8')
+                                    print(f"Conteúdo do arquivo .txt lido com sucesso: {text_file_content}")  # log temp
+                                except UnicodeDecodeError as e:
+                                    print(f"Erro ao decodificar o arquivo .txt: {e}")  # log temp
+                                    text_file_content = "Erro: Não foi possível decodificar o conteúdo do arquivo .txt."
 
-                    if images:
-                        prompt = [prompt] + images
+                        if images:
+                            prompt = [prompt] + images
+                        if text_file_content:
+                            prompt += f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do usuário com base nesse conteúdo. Se o usuário não fornecer uma instrução clara, descreva o conteúdo do arquivo de forma natural, engraçada e irônica.\n\nConteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
 
                     # fodase o stream 
 
+                    print(f"Prompt enviado ao modelo: {prompt}")  # log temp
                     _response = await chat.send_message(message=prompt)
+                    print(f"Resposta do modelo: {_response.text}")  # log temp
 
                 # dividir tb
                 def split_message(text, max_length=1900):

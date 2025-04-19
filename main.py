@@ -1,4 +1,3 @@
-
 from google import genai as geneai
 from google.genai import types
 
@@ -23,7 +22,6 @@ Voce ira receber mensagens no formato: informacoes: mensagem de "nome do usuario
 Sua tarefa e entender e responder ao conteudo completo da mensagem de forma natural, engracada e ironica, como se fosse uma conversa no Discord. Nao responda apenas a uma parte da mensagem, como a primeira palavra, a menos que isso faca sentido no contexto. Se a mensagem for uma pergunta, responda a pergunta completa. Se for um comando, siga o comando. Se for uma frase, responda de forma apropriada ao contexto.
 """ # melhorando o prompt pro modelo do bot entender melhor o conteudo da mensagem.
 
-
 MODEL = "gemini-2.0-flash"
 
 generation_config = types.GenerateContentConfig(
@@ -42,8 +40,6 @@ bot.generation_config = generation_config
 bot.httpclient = httpx.AsyncClient()
 bot.client = client
 
-
-
 @bot.event
 async def on_ready():
     for file in os.listdir("cogs"):
@@ -51,7 +47,7 @@ async def on_ready():
             await bot.load_extension(f"cogs.{file[:-3]}")
     sync = await bot.tree.sync()
     print(f"{len(sync)} comandos foram sincronizados.")
+    print(f"Bot conectado como: {bot.user.name} (ID: {bot.user.id}) | Rogerio")
     print("Bot on.")
 
 bot.run(token)
-
