@@ -106,6 +106,34 @@ class Analisar(commands.Cog):
             await inter.followup.send(embed=embed, view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id))
             print(f"Erro ao analisar usuario em: {inter.guild.name}")
 
+    class PromptModal(discord.ui.Modal):
+        def __init__(self, bot, user, mpc, author, original_prompt):
+            super().__init__(title="Novo Prompt para Análise")
+            self.bot = bot
+            self.user = user
+            self.mpc = mpc
+            self.author = author
+            self.original_prompt = original_prompt
+            self.add_item(discord.ui.TextInput(
+                label="Novo Prompt",
+                style=discord.TextStyle.long,
+                placeholder="Digite o novo prompt para análise...",
+                required=False
+            ))
+
+        async def on_submit(self, interaction: discord.Interaction):
+            try:
+                # usa o novo prompt se tiver, se nao usa o original
+                new_prompt = self.children[0].value if self.children[0].value else self.original_prompt
+                await self.bot.get_cog("Analisar")._executar_analise(interaction, self.user, new_prompt, self.mpc, janalisado=True)
+            except Exception as e:
+                embed = discord.Embed(
+                    title="Ocorreu Um Erro!",
+                    description=f"\n```py\n{str(e)}\n```",
+                    color=discord.Color.red()
+                )
+                await interaction.response.send_message(embed=embed, ephemeral=False)
+
     class Botoes(discord.ui.View):
         def __init__(self, bot, user, prompt, mpc, author=None):
             super().__init__(timeout=60)
@@ -123,8 +151,46 @@ class Analisar(commands.Cog):
                 return await interaction.response.send_message("Apenas o usuario que executou o comando pode usar esse botao.", ephemeral=True)
             elif not self.janalisado:
                 self.janalisado = True
-                # reexecuta a análise
-                await self.bot.get_cog("Analisar")._executar_analise(interaction, self.user, self.prompt, self.mpc, janalisado=True)
+                # cria um menu de seleção para escolher entre novo prompt ou original
+                select = discord.ui.Select(
+                    placeholder="Usar um novo prompt?",
+                    min_values=1,
+                    max_values=1,
+                    options=[
+                        discord.SelectOption(label="Sim", value="sim", description="Usar um novo prompt para análise."),
+                        discord.SelectOption(label="Não", value="nao", description="Usar o prompt original.")
+                    ]
+                )
+
+                async def select_callback(interaction_select: discord.Interaction):
+                    try:
+                        if select.values[0] == "sim":
+                            # exibe o modal p/ colocar um novo prompt
+                            await interaction_select.response.send_modal(
+                                Analisar.PromptModal(self.bot, self.user, self.mpc, self.author, self.prompt)
+                            )
+                        else:
+                            # faz a análise com o prompt original
+                            await self.bot.get_cog("Analisar")._executar_analise(
+                                interaction_select, self.user, self.prompt, self.mpc, janalisado=True
+                            )
+                    except Exception as e:
+                        embed = discord.Embed(
+                            title="Ocorreu Um Erro!",
+                            description=f"\n```py\n{str(e)}\n```",
+                            color=discord.Color.red()
+                        )
+                        await interaction_select.response.send_message(embed=embed, ephemeral=False)
+
+                select.callback = select_callback
+                view = discord.ui.View()
+                view.add_item(select)
+
+                await interaction.response.send_message(
+                    "Deseja usar um novo prompt para a análise?", 
+                    view=view, 
+                    ephemeral=True
+                )
             else:
                 # informa que o usuário já foi analisado
                 await interaction.response.send_message("Usuario ja analisado.", ephemeral=True)
