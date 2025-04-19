@@ -15,6 +15,7 @@ class Imitar(commands.Cog):
         super().__init__()
         self.bot = bot
         self.client = genai.Client(api_key=api_key)
+        self.chats = bot.chats
 
     async def _pegarMensagensParaTreino(self, inter: discord.Interaction, user: discord.User, mpc: int) -> List[List[str]]:
         messages = []
@@ -54,7 +55,6 @@ class Imitar(commands.Cog):
             config=types.CreateTuningJobConfig(
         epoch_count=8,
         tuned_model_display_name=f'{user.id}',
-        learning_rate=0.0001,
         batch_size=4
     ),
         )
@@ -93,21 +93,32 @@ class Imitar(commands.Cog):
         if user == self.bot.user:
             return await inter.response.send_message("Não posso me imitar.")
         try:
+            embed = discord.Embed(description="Pegando mensagens do usario...", color=discord.Color.blue())
+            await inter.edit_original_response(embed=embed)
             messages = await self._pegarMensagensParaTreino(inter, user, mpc)
+            embed = discord.Embed(description="Treinando Modelo...", color=discord.Color.blue())
+            await inter.edit_original_response(embed=embed)
             tuning_job = await self._TuneDataset(messages, user)
             print(tuning_job)
+            embed = discord.Embed(description="Renderizando modelo....", color=discord.Color.orange())
+            await inter.edit_original_response(embed=embed)
             tuning_job = await self._gettunningJob(tuning_job.name)
             print(tuning_job)
-            
-            
-            response = await self.client.aio.models.generate_content(
-            model=tuning_job.tuned_model.endpoint,
-            contents=[
-                types.Part.from_text(prompt),
-                types.Part.from_text(f"Nome do usuario: {user.name}"),
-            ],
-                )       
-            await inter.followup.send(response.text + f" \n-# mensagens usadas para treino: {len(messages)}")
+        
+
+            self.chats[str(inter.channel.id)] = self.client.aio.chats.create(
+                model=tuning_job.tuned_model.endpoint,
+                config=types.GenerateContentConfig(
+                    max_output_tokens=1000,
+                ),
+            )
+
+            embed = discord.Embed(
+                title="Modelo Treinado com Sucesso!",
+                description=f"Modelo treinado com sucesso! Agora posso imitar o {user.name}.\n\nPrompt: {prompt}",
+                color=discord.Color.green(),
+            )
+            await inter.edit_original_response(embed=embed)
         except Exception as e:
             embed = discord.Embed(title="Ocorreu Um Erro!", description=str(e), color=discord.Color.red())
             await inter.followup.send(embed=embed)
