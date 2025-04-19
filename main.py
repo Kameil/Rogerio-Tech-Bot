@@ -24,7 +24,7 @@ Sua tarefa e entender e responder ao conteudo completo da mensagem de forma natu
 """ # melhorando o prompt pro modelo do bot entender melhor o conteudo da mensagem.
 
 
-MODEL = "gemini-2.0-flash"
+MODEL = "gemini-2.5-pro-exp-03-25"
 
 generation_config = types.GenerateContentConfig(
     max_output_tokens=1000,
@@ -34,7 +34,7 @@ generation_config = types.GenerateContentConfig(
 
 chats = {}
 
-bot = commands.Bot('r!', help_command=None, intents=discord.Intents.all())
+bot = commands.AutoShardedBot('r!', help_command=None, intents=discord.Intents.all())
 
 bot.chats = chats
 bot.model = MODEL
@@ -51,7 +51,7 @@ async def on_ready():
             await bot.load_extension(f"cogs.{file[:-3]}")
     sync = await bot.tree.sync()
     print(f"{len(sync)} comandos foram sincronizados.")
-    print("Bot on.")
+    print(f"logado em: {bot.user.name} \nshard: {bot.shard_id} \nshard-count:{bot.shard_count}")
 
 bot.run(token)
 
