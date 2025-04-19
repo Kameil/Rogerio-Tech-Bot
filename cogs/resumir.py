@@ -38,12 +38,13 @@ class Resumir(commands.Cog):
                 + "\n".join(mensagens)
             )
 
-            # cria uma nova sessão de chat para o resumo
-            chat = self.client.aio.chats.create(model=self.model, config=self.generation_config)
-
-            # envia o prompt para o modelo
+            # gera o resumo diretamente, sem sessão
             async with inter.channel.typing():
-                resposta = await chat.send_message(message=prompt)
+                resposta = await self.client.aio.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    config=self.generation_config
+                )
 
             # envia o resumo
             resumo = resposta.text.strip()
@@ -55,7 +56,7 @@ class Resumir(commands.Cog):
                 await inter.followup.send(resumo)
 
         except Exception as e:
-            mensagem_erro = f"Ocorreu um erro ao resumir as mensagens: {str(e)}"
+            mensagem_erro = f"Ocorreu um erro ao resumir as mensagens: {str(e)}\nTipo do erro: {type(e).__name__}"
             await inter.followup.send(embed=discord.Embed(
                 title="Erro",
                 description=mensagem_erro,
