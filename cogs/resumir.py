@@ -38,12 +38,13 @@ class Resumir(commands.Cog):
                 + "\n".join(mensagens)
             )
 
-            # cria uma nova sessão de chat para o resumo
-            chat = self.client.aio.chats.create(model=self.model, config=self.generation_config)
-
-            # envia o prompt para o modelo
+            # gera o resumo diretamente, sem sessão
             async with inter.channel.typing():
-                resposta = await chat.send_message(message=prompt)
+                resposta = await self.client.models.generate_content(
+                    model=self.model,
+                    contents=prompt,
+                    generation_config=self.generation_config
+                )
 
             # envia o resumo
             resumo = resposta.text.strip()
