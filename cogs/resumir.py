@@ -40,10 +40,10 @@ class Resumir(commands.Cog):
 
             # gera o resumo diretamente, sem sessão
             async with inter.channel.typing():
-                resposta = await self.client.models.generate_content(
+                resposta = await self.client.aio.models.generate_content(
                     model=self.model,
                     contents=prompt,
-                    generation_config=self.generation_config
+                    config=self.generation_config
                 )
 
             # envia o resumo
@@ -56,7 +56,7 @@ class Resumir(commands.Cog):
                 await inter.followup.send(resumo)
 
         except Exception as e:
-            mensagem_erro = f"Ocorreu um erro ao resumir as mensagens: {str(e)}"
+            mensagem_erro = f"Ocorreu um erro ao resumir as mensagens: {str(e)}\nTipo do erro: {type(e).__name__}"
             await inter.followup.send(embed=discord.Embed(
                 title="Erro",
                 description=mensagem_erro,
