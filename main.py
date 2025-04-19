@@ -47,7 +47,7 @@ async def on_ready():
             await bot.load_extension(f"cogs.{file[:-3]}")
     sync = await bot.tree.sync()
     print(f"{len(sync)} comandos foram sincronizados.")
-    print(f"Bot conectado como: {bot.user.name} (ID: {bot.user.id}) | Rogerio")
+    print(f"Bot conectado como: {bot.user.name} (ID: {bot.user.id}) | GG!")
     print("Bot on.")
 
 bot.run(token)
