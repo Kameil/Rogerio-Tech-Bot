@@ -8,6 +8,7 @@ from PIL import Image
 from io import BytesIO
 import asyncio
 from asyncio import Queue
+import textwrap
 
 from google.genai import types
 
@@ -18,33 +19,42 @@ class Chat(commands.Cog):
         self.generation_config = bot.generation_config
         self.chats = bot.chats
         self.httpClient = bot.httpclient
-        self.processing = False
-        self.message_queue = Queue()
+        self.processing = {}
+        self.message_queue = {}
         self.client = bot.client
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        rogerioPermissoes = message.channel.permissions_for(message.guild.me)
 
-        # verifica se o rogerio tem permissao de enviar mensagem
-        if not message.author.bot and rogerioPermissoes.send_messages:
-            # if para verificar se o rogerio deve responder ou nao
+        if not message.flags.ephemeral and not message.author.bot:
+
+            if message.guild is None:
+                rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+            else:
+                rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+
+            channel_id = str(message.channel.id)
+
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
-                self.bot.user in message.mentions):
-                # se sim adiciona o discord.Message no queue
-                await self.message_queue.put(message)
-                if not self.processing:
-                    await self.process_queue()
+                self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
 
-    async def process_queue(self):
-        while not self.message_queue.empty():
-            # especificar o tipo ne pra facilitar
-            message: discord.Message = await self.message_queue.get()
+                if self.message_queue.get(channel_id) is None:
+                    self.message_queue[channel_id] = Queue()
+
+                await self.message_queue[channel_id].put(message)
+
+                if not self.processing.get(channel_id, False):
+                    self.processing[channel_id] = True
+                    await self.process_queue(channel_id)
+
+    async def process_queue(self, channel_id: str):
+        while not self.message_queue[channel_id].empty():
+            message: discord.Message = await self.message_queue[channel_id].get()
             channel_id = str(message.channel.id)
 
             try:
-                self.processing = True
+                self.processing[channel_id] = True
 
                 if channel_id not in self.chats:
                     self.chats[channel_id] = self.client.aio.chats.create(model=self.model, config=self.generation_config)
@@ -60,7 +70,7 @@ class Chat(commands.Cog):
                     else:
                         referenced_content = f" (em resposta a: '{referenced_message.content}' de {referenced_message.author.name})"
 
-                prompt = f'Informaçoes: Mensagem de "{message.author.name}"'
+                prompt = f'Informaçoes: Mensagem de "{message.author.display_name}"'
                 if atividades:
                     prompt += f", ativo agora em: discord(aqui), {', '.join(atividades)}"
                 prompt += f": {message.content.replace(f'<@{self.bot.user.id}>', 'Rogerio Tech')}{referenced_content}"
@@ -91,39 +101,42 @@ class Chat(commands.Cog):
                     if images:
                         prompt = [prompt] + images
 
-                    message_enviada = await message.reply("...", mention_author=False)
-                    conteudo = ""
-                    mensagens_enviadas = [message_enviada]
+                    # fodase o stream 
 
-                    async for chunk in await chat.send_message_stream(message=prompt):
-                        conteudo += chunk.text
-                        if len(conteudo) <= 1000:
-                            await mensagens_enviadas[-1].edit(content=conteudo)
-                            await asyncio.sleep(1)
+                    _response = await chat.send_message(message=prompt)
+
+                # dividir tb
+                def split_message(text, max_length=1900):
+                    lines = text.split('\n')  # dividir p quebrar a linha
+                    messages = []
+                    current_message = ""
+                    
+                    for line in lines:
+                        # veriica se passou o limite
+                        if len(current_message) + len(line) + 1 <= max_length:
+                            current_message += line + '\n'
                         else:
-                            while len(conteudo) > 1900:
-                                await mensagens_enviadas[-1].edit(content=conteudo[:1900])
-                                await asyncio.sleep(1)
-                                nova_mensagem = await message.channel.send("...")
-                                mensagens_enviadas.append(nova_mensagem)
-                                conteudo = conteudo[1900:]
-                            await mensagens_enviadas[-1].edit(content=conteudo)
-                            await asyncio.sleep(1)
+                            # se a msg n tiver vazia adiciona a lista
+                            if current_message:
+                                messages.append(current_message.rstrip('\n'))
+                            # inicia  aconversa na linha atual
+                            current_message = line + '\n'
+                    
+                    # add a ultima mensagem, se tiver
+                    if current_message:
+                        messages.append(current_message.rstrip('\n'))
+                    
+                    return messages
 
-                    if conteudo and len(conteudo) <= 1900:
-                        await mensagens_enviadas[-1].edit(content=conteudo)
-                    elif conteudo:
-                        while len(conteudo) > 1900:
-                            await mensagens_enviadas[-1].edit(content=conteudo[:1900])
-                            await asyncio.sleep(1)
-                            nova_mensagem = await message.channel.send("...")
-                            mensagens_enviadas.append(nova_mensagem)
-                            conteudo = conteudo[1900:]
-                        await mensagens_enviadas[-1].edit(content=conteudo)
+                _responseDividida = split_message(_response.text)
 
-                self.message_queue.task_done()
+                for _m in _responseDividida:
+                    mensagem_enviada = await message.reply(_m, mention_author=False)
+
+                self.message_queue[channel_id].task_done()
 
             except Exception as e:
+                self.message_queue[channel_id].task_done()
                 if isinstance(e, discord.HTTPException) and e.status == 429:
                     await asyncio.sleep(2)
                     embed = discord.Embed(title="Rate Limit Excedido", description="Aguarde um momento, estou enviando muitas mensagens rápido demais!", color=discord.Color.yellow())
@@ -132,13 +145,10 @@ class Chat(commands.Cog):
                     embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
                     await message.channel.send(embed=embed)
 
-                self.message_queue.task_done()
-
             finally:
-                self.processing = False
-                if not self.message_queue.empty():
-                    await self.process_queue()
-        
-    
+                self.processing[channel_id] = False
+                if not self.message_queue[channel_id].empty():
+                    await self.process_queue(channel_id)
+
 async def setup(bot):
     await bot.add_cog(Chat(bot))

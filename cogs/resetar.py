@@ -16,15 +16,11 @@ class Resetar(commands.Cog):
             await inter.response.defer()
             channel_id = str(inter.channel.id)
             if channel_id in self.chats:
-                try:
-                    msgs = len(self.chats[channel_id].get_history())
-                except:
-                    msgs = "undefined"
                 self.chats[channel_id] = self.client.aio.chats.create(model=self.model, config=self.generation_config)
                 embed = discord.Embed(title="Conversa resetada", description="A conversa com o bot foi resetada com sucesso.", color=discord.Color.green())
 
-                embed.set_footer(text=f"**{msgs}** mensagens foram apagadas.")
-                await inter.response.send_message(embed=embed)
+                embed.set_footer(text=f"{inter.user.name}")
+                await inter.followup.send(embed=embed)
 
 
             else:
