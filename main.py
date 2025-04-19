@@ -26,7 +26,7 @@ MODEL = "gemini-2.0-flash"
 
 generation_config = types.GenerateContentConfig(
     max_output_tokens=1000,
-    temperature=0.7,  # reduzido de 1.0 para 0.7
+    temperature=0.8,  # reduzido de 1.0 para 0.8
     system_instruction=SYSTEM_INSTRUCTION
 )
 
