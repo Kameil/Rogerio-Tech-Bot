@@ -52,7 +52,10 @@ class Imitar(commands.Cog):
             base_model=model,
             training_dataset=training_dataset,
             config=types.CreateTuningJobConfig(
-        epoch_count=5, tuned_model_display_name=f'{user.id}'
+        epoch_count=8,
+        tuned_model_display_name=f'{user.id}',
+        learning_rate=0.0001,
+        batch_size=4
     ),
         )
         return tuning_job
