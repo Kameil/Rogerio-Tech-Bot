@@ -99,14 +99,14 @@ class Imitar(commands.Cog):
             
             response = await self.client.aio.models.generate_content(
             model=tuning_job.tuned_model.endpoint,
-            contents=prompt,
-            config=types.GenerateContentConfig(
-                system_instruction=f"voce e o {user.name} e tem que responder como ele, use o prompt para isso.",
-            )
+            contents=[
+                types.Part.from_text(prompt),
+                types.Part.from_text(f"Nome do usuario: {user.name}"),
+            ],
                 )       
             await inter.followup.send(response.text + f" \n-# mensagens usadas para treino: {len(messages)}")
-        except:
-            embed = discord.Embed(title="Ocorreu Um Erro!", description="Não consegui imitar essa pessoa, talvez ela não tenha falado o suficiente.", color=discord.Color.red())
+        except Exception as e:
+            embed = discord.Embed(title="Ocorreu Um Erro!", description=str(e), color=discord.Color.red())
             await inter.followup.send(embed=embed)
 
 
