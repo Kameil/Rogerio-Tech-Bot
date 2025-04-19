@@ -25,9 +25,7 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-
         if not message.flags.ephemeral and not message.author.bot:
-
             if message.guild is None:
                 rogerioPermissoes = message.channel.permissions_for(self.bot.user)
             else:
@@ -38,7 +36,6 @@ class Chat(commands.Cog):
             if (f"<@{self.bot.user.id}>" in message.content or 
                 isinstance(message.channel, discord.DMChannel) or 
                 self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
-
                 if self.message_queue.get(channel_id) is None:
                     self.message_queue[channel_id] = Queue()
 
@@ -47,6 +44,39 @@ class Chat(commands.Cog):
                 if not self.processing.get(channel_id, False):
                     self.processing[channel_id] = True
                     await self.process_queue(channel_id)
+
+    async def process_attachments(self, attachments):
+        images = []
+        text_file_content = None
+
+        for attachment in attachments:
+            if attachment.content_type.startswith("image/"):
+                response = await self.httpClient.get(attachment.url)
+                response.raise_for_status()
+                image = types.Part.from_bytes(data=response.content, mime_type=attachment.content_type)
+                images.append(image)
+            if attachment.content_type == "application/pdf":
+                # for attachment in message.attachments:
+                #     response = await self.httpClient.get(attachment.url)
+                #     response.raise_for_status()
+                #     pdf_document = fitz.open(stream=response.content, filetype="pdf")
+                #     for page in pdf_document:
+                #         pixmap = page.get_pixmap()
+                #         img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
+                #         img_buffer = BytesIO()
+                #         img.save(img_buffer, format="PNG")
+                #         b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
+                #         images.append({'mime_type': 'image/png', 'data': b64_encoded})
+                raise("Leitor de pdf desativado por enquanto.")
+            elif attachment.content_type.startswith("text/plain"): 
+                response = await self.httpClient.get(attachment.url)
+                response.raise_for_status()
+                try:
+                    text_file_content = response.content.decode('utf-8')
+                except UnicodeDecodeError:
+                    text_file_content = "Erro: Não foi possível decodificar o conteúdo do arquivo .txt."
+
+        return images, text_file_content
 
     async def process_queue(self, channel_id: str):
         while not self.message_queue[channel_id].empty():
@@ -79,46 +109,16 @@ class Chat(commands.Cog):
                     images = []
                     text_file_content = None
                     if message.attachments:
-                        for attachment in message.attachments:
-                            print(f"Anexo detectado: {attachment.filename}, Tipo: {attachment.content_type}")  # log temp
-                            if attachment.content_type.startswith("image/"):
-                                response = await self.httpClient.get(attachment.url)
-                                response.raise_for_status()
-                                image = types.Part.from_bytes(data=response.content, mime_type=attachment.content_type)
-                                images.append(image)
-                            if attachment.content_type == "application/pdf":
-                                # for attachment in message.attachments:
-                                #     response = await self.httpClient.get(attachment.url)
-                                #     response.raise_for_status()
-                                #     pdf_document = fitz.open(stream=response.content, filetype="pdf")
-                                #     for page in pdf_document:
-                                #         pixmap = page.get_pixmap()
-                                #         img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-                                #         img_buffer = BytesIO()
-                                #         img.save(img_buffer, format="PNG")
-                                #         b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-                                #         images.append({'mime_type': 'image/png', 'data': b64_encoded})
-                                raise("Leitor de pdf desativado por enquanto.")
-                            elif attachment.content_type.startswith("text/plain"): 
-                                response = await self.httpClient.get(attachment.url)
-                                response.raise_for_status()
-                                try:
-                                    text_file_content = response.content.decode('utf-8')
-                                    print(f"Conteúdo do arquivo .txt lido com sucesso: {text_file_content}")  # log temp
-                                except UnicodeDecodeError as e:
-                                    print(f"Erro ao decodificar o arquivo .txt: {e}")  # log temp
-                                    text_file_content = "Erro: Não foi possível decodificar o conteúdo do arquivo .txt."
+                        images, text_file_content = await self.process_attachments(message.attachments)
 
-                        if images:
-                            prompt = [prompt] + images
-                        if text_file_content:
-                            prompt += f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do usuário com base nesse conteúdo. Se o usuário não fornecer uma instrução clara, descreva o conteúdo do arquivo de forma natural, engraçada e irônica.\n\nConteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
+                    if images:
+                        prompt = [prompt] + images
+                    if text_file_content:
+                        prompt += f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do usuário com base nesse conteúdo. Se o usuário não fornecer uma instrução clara, descreva o conteúdo do arquivo de forma natural, engraçada e irônica.\n\nConteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
 
                     # fodase o stream 
 
-                    print(f"Prompt enviado ao modelo: {prompt}")  # log temp
                     _response = await chat.send_message(message=prompt)
-                    print(f"Resposta do modelo: {_response.text}")  # log temp
 
                 # dividir tb
                 def split_message(text, max_length=1900):
