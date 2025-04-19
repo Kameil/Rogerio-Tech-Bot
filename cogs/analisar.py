@@ -31,6 +31,25 @@ class Analisar(commands.Cog):
             if mention in content:
                 content = content.replace(mention, f"@{member.name}")
         return content
+    # aqui fora para poder ser reutilizada em outras cogs 
+    async def _pegarMensagens(self, inter: discord.Interaction, user: discord.User, mpc: int):
+        messages = []
+            # itera sobre os canais de texto do servidor
+        for channel in inter.guild.text_channels:
+            bot_permissions = channel.permissions_for(inter.guild.me)
+            # ignora canais sem permissão de leitura de histórico
+            if not bot_permissions.read_message_history:
+                continue
+            # coleta até 'mpc' mensagens do canal
+            async for message in channel.history(limit=mpc):
+                if message.author == user:
+                    horario_utc = message.created_at 
+                    horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
+                    # sanitiza o conteúdo da mensagem para evitar menções ativas
+                    sanitized_content = self.mencao(message.content, inter.guild)
+                    # adiciona a mensagem sanitizada à lista
+                    messages.append(f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às {horario_local.strftime("%H:%M:%S %d/%m/%Y")}')
+        return messages
 
     async def _executar_analise(self, inter: discord.Interaction, user, prompt=None, mpc=100, janalisado=False):
         # defer aresposta para evitar timeout enquanto processa
@@ -40,22 +59,7 @@ class Analisar(commands.Cog):
             return await inter.followup.send("Esse comando só pode ser executado em um servidor.")
         try:
             # ista para armazenar mensagens coletadas
-            messages = []
-            # itera sobre os canais de texto do servidor
-            for channel in inter.guild.text_channels:
-                bot_permissions = channel.permissions_for(inter.guild.me)
-                # ignora canais sem permissão de leitura de histórico
-                if not bot_permissions.read_message_history:
-                    continue
-                # coleta até 'mpc' mensagens do canal
-                async for message in channel.history(limit=mpc):
-                    if message.author == user:
-                        horario_utc = message.created_at 
-                        horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
-                        # sanitiza o conteúdo da mensagem para evitar menções ativas
-                        sanitized_content = self.mencao(message.content, inter.guild)
-                        # adiciona a mensagem sanitizada à lista
-                        messages.append(f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às {horario_local.strftime("%H:%M:%S %d/%m/%Y")}')
+            messages = self._pegarMensagens(inter, user, mpc)
 
             # configura o prompt base para análise
             prompt_probot = f"analise esse usuario com base no seu nome e na sua imagem de perfil e diga se ele e desenrolado ou nao. Nome:{user.name}\n"

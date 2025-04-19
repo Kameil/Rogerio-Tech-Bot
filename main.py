@@ -24,7 +24,7 @@ Sua tarefa e entender e responder ao conteudo completo da mensagem de forma natu
 """ # melhorando o prompt pro modelo do bot entender melhor o conteudo da mensagem.
 
 
-MODEL = "gemini-2.5-pro-exp-03-25"
+MODEL = "gemini-2.0-flash"
 
 generation_config = types.GenerateContentConfig(
     max_output_tokens=1000,
