@@ -89,19 +89,22 @@ class Imitar(commands.Cog):
         # Verifica se o usuário é o próprio bot
         if user == self.bot.user:
             return await inter.response.send_message("Não posso me imitar.")
-        
-        messages = await self._pegarMensagensParaTreino(inter, user, mpc)
-        tuning_job = await self._TuneDataset(messages, user)
-        print(tuning_job)
-        tuning_job = await self._gettunningJob(tuning_job.name)
-        print(tuning_job)
-        
-        
-        response = await self.client.aio.models.generate_content(
-        model=tuning_job.tuned_model.endpoint,
-        contents=prompt,
-            )       
-        await inter.followup.send(response.text)
+        try:
+            messages = await self._pegarMensagensParaTreino(inter, user, mpc)
+            tuning_job = await self._TuneDataset(messages, user)
+            print(tuning_job)
+            tuning_job = await self._gettunningJob(tuning_job.name)
+            print(tuning_job)
+            
+            
+            response = await self.client.aio.models.generate_content(
+            model=tuning_job.tuned_model.endpoint,
+            contents=prompt,
+                )       
+            await inter.followup.send(response.text)
+        except:
+            embed = discord.Embed(title="Ocorreu Um Erro!", description="Não consegui imitar essa pessoa, talvez ela não tenha falado o suficiente.", color=discord.Color.red())
+            await inter.followup.send(embed=embed)
 
 
 
