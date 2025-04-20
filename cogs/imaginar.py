@@ -14,7 +14,7 @@ import io
 class Imaginar(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.client = genai.Client(api_key=api_key)
+        self.client = bot.client
         self.MODEL = "gemini-2.0-flash-exp-image-generation"
 
     @app_commands.command(name="imaginar", description="use sua imaginacao.")
