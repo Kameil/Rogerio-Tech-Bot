@@ -32,7 +32,7 @@ generation_config = types.GenerateContentConfig(
 
 chats = {}
 
-bot = commands.AutoShardedBot('r!', help_command=None, intents=discord.Intents.all())
+bot = commands.Bot('r!', help_command=None, intents=discord.Intents.all())
 
 bot.chats = chats
 bot.model = MODEL
@@ -49,4 +49,4 @@ async def on_ready():
     print(f"{len(sync)} comandos foram sincronizados.")
     print(f"Bot: {bot.user.name} (ID: {bot.user.id}) | LIGADO!")
 
-bot.run(token)
+bot.run(token=token)
