@@ -64,6 +64,7 @@ class Imaginar(commands.Cog):
                 )
         except Exception as e:
             embed = discord.Embed(title="Erro", description="```py\n" + str(e) + "\n```", color=discord.Color.red())
+            await inter.followup.send(embed=embed)
 
 
 
