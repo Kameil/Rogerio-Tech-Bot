@@ -14,8 +14,10 @@ import io
 class Imaginar(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.client = bot.client
+        self.client: genai.Client = bot.client
         self.MODEL = "gemini-2.0-flash-exp-image-generation"
+
+
 
     @app_commands.command(name="imaginar", description="use sua imaginacao.")
     async def imaginar(self, inter: discord.Interaction, prompt: str):
@@ -36,28 +38,32 @@ class Imaginar(commands.Cog):
             ],
             response_mime_type="text/plain",
         )
-        response = await self.client.aio.models.generate_content(
-            contents=contents,
-            config=generation_config,
-            model=self.MODEL
-        )
-        if response.candidates[0].content.parts[0].inline_data:
-            inline_data = response.candidates[0].content.parts[0].inline_data
-            file_extension = mimetypes.guess_extension(inline_data.mime_type)
-            file_data = inline_data.data
+        try:
+            response = await self.client.aio.models.generate_content(
+                contents=contents,
+                config=generation_config,
+                model=self.MODEL
+            )
+            if response.candidates and response.candidates[0].content.parts[0].inline_data:
+                inline_data = response.candidates[0].content.parts[0].inline_data
+                file_extension = mimetypes.guess_extension(inline_data.mime_type)
+                file_data = inline_data.data
 
-            file = discord.File(
-                io.BytesIO(file_data),
-                filename=f"rogerio-image{file_extension}"
-            )
-            await inter.followup.send(
-                content=inter.user.mention,
-                file=file,
-            )
-        else:
-            await inter.followup.send(
-                content=response.text,
-            )
+                file = discord.File(
+                    io.BytesIO(file_data),
+                    filename=f"rogerio-image{file_extension}"
+                )
+                await inter.followup.send(
+                    content=inter.user.mention,
+                    file=file,
+                )
+            else:
+                await inter.followup.send(
+                    content=response.text,
+
+                )
+        except Exception as e:
+            embed = discord.Embed(title="Erro", description="```py\n" + str(e) + "\n```", color=discord.Color.red())
 
 
 
