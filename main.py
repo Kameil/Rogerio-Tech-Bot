@@ -32,7 +32,7 @@ generation_config = types.GenerateContentConfig(
 
 chats = {}
 
-bot = commands.Bot('r!', help_command=None, intents=discord.Intents.all())
+bot = commands.AutoShardedBot('r!', help_command=None, intents=discord.Intents.all())
 
 bot.chats = chats
 bot.model = MODEL
