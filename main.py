@@ -1,52 +1,70 @@
-from google import genai as geneai
-from google.genai import types
-
-from config import api_key, token
-import discord
-
+from time import sleep
 import discord
 from discord.ext import commands
-import os
-
 import httpx
+import os
+from google import genai as geneai
+from google.genai import types
+from config import api_key, token
 
-client = geneai.Client(api_key=api_key)
+genai_client = geneai.Client(api_key=api_key)
 
 SYSTEM_INSTRUCTION = """ 
-- Seu nome e Rogerio Tech.
-- Voce e um bot de discord.
-- Voce e engracado e ironico.
+Nome: Rogerio Tech | Tipo: Bot de Discord | Tom: Engraçado e irônico
 
-Voce ira receber mensagens no formato: informacoes: mensagem de "nome do usuario": "conteudo da mensagem" ou informacoes: mensagem de "nome do usuario" ativo agora em: "atividade1", "atividade2", "atividad[...]. O "conteudo da mensagem" pode ser uma pergunta, um comando ou uma frase completa.
+Formato das mensagens recebidas:
+- "informacoes: mensagem de 'nome do usuario': 'conteudo da mensagem'"
+- "informacoes: mensagem de 'nome do usuario' ativo agora em: 'atividade1', 'atividade2', ..."
 
-Sua tarefa e entender e responder ao conteudo completo da mensagem de forma natural, engracada e ironica, como se fosse uma conversa no Discord. Nao responda apenas a uma parte da mensagem, como a primeira palavra, a menos que isso faca sentido no contexto. Se a mensagem for uma pergunta, responda a pergunta completa. Se for um comando, siga o comando. Se for uma frase, responda de forma apropriada ao contexto.
-""" # melhorando o prompt pro modelo do bot entender melhor o conteudo da mensagem.
+Regras:
+- Responda ao conteúdo completo da mensagem de forma natural, engraçada e irônica.
+- Não responda apenas a uma parte da mensagem, a menos que faça sentido.
+- Pergunta: Responda a pergunta completa.
+- Comando: Siga o comando.
+- Frase: Responda de forma apropriada ao contexto.
+"""
 
-MODEL = "gemini-2.0-flash"
-
-generation_config = types.GenerateContentConfig(
-    max_output_tokens=1000,
-    temperature=0.7,  # reduzido de 1.0 para 0.7
+MODEL_NAME = "gemini-2.0-flash"
+GENERATION_CONFIG = types.GenerateContentConfig(
+    max_output_tokens=1000,      
+    temperature=0.7,             
     system_instruction=SYSTEM_INSTRUCTION
 )
 
 chats = {}
 
-bot = commands.Bot('r!', help_command=None, intents=discord.Intents.all())
+bot = commands.Bot(
+    command_prefix='r!',
+    help_command=None,
+    intents=discord.Intents.all()
+)
 
 bot.chats = chats
-bot.model = MODEL
-bot.generation_config = generation_config 
+bot.model = MODEL_NAME
+bot.generation_config = GENERATION_CONFIG
 bot.httpclient = httpx.AsyncClient()
-bot.client = client
+bot.client = genai_client
 
 @bot.event
 async def on_ready():
     for file in os.listdir("cogs"):
         if file.endswith(".py"):
             await bot.load_extension(f"cogs.{file[:-3]}")
-    sync = await bot.tree.sync()
-    print(f"{len(sync)} comandos foram sincronizados.")
-    print(f"Bot: {bot.user.name} (ID: {bot.user.id}) | LIGADO!")
+    
+    synced_commands = await bot.tree.sync()
+    print("=== Inicialização do Rogerio Tech ===")
+    sleep(1)
+    print(f"Comandos sincronizados: {len(synced_commands)}")
+    sleep(1)
+    print(f"Nome do bot: {bot.user.name}")
+    sleep(1)
+    print(f"ID do bot: {bot.user.id}")
+    sleep(1)
+    print(f"Prefixo configurado: {bot.command_prefix}")
+    sleep(1)
+    print(f"Modelo de IA: {bot.model}")
+    sleep(1)
+    print("\033[32mBot está online e pronto para uso!\033[0m")
+    print("===================================")
 
 bot.run(token=token)
