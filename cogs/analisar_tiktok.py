@@ -24,7 +24,7 @@ class Analisar_Tiktok(commands.Cog):
     async def pegarImagemENomeDosVideos(username: str) -> Optional[List[Dict[str, str | bytes]]]:
         imagens: List[Dict[str, str | bytes]] = []
         async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=False,
+            browser = await p.chromium.launch(headless=True,
                 executable_path="chromium-local/chromium/chrome-linux/chrome", 
                 args=[
                     "--disable-gpu",
@@ -146,7 +146,7 @@ class Analisar_Tiktok(commands.Cog):
         await inter.response.defer(thinking=True)
         embed = discord.Embed(title=username, description="Analisando o perfil do tiktok, isso pode demorar um pouco...", color=discord.Color.orange())
         await inter.followup.send(embed=embed)
-        videos_imagens = await self.pegarImagemENomeDosVideos()
+        videos_imagens = await self.pegarImagemENomeDosVideos(username)
         videos_contents = [
             types.Content(
                 parts=[
