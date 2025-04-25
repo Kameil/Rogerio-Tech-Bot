@@ -178,4 +178,5 @@ class Analisar_Tiktok(commands.Cog):
             await inter.response.send(parte)
         
 
-
+async def setup(bot):
+    await bot.add_cog(Analisar_Tiktok(bot))
