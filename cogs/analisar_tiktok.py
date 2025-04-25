@@ -145,7 +145,7 @@ class Analisar_Tiktok(commands.Cog):
     async def analisar_tiktok(self, inter: discord.Interaction, username: str):
         await inter.response.defer(thinking=True)
         embed = discord.Embed(title=username, description="Analisando o perfil do tiktok, isso pode demorar um pouco...", color=discord.Color.orange())
-        await inter.followup.send()
+        await inter.followup.send(embed=embed)
         videos_imagens = await self.pegarImagemENomeDosVideos()
         videos_contents = [
             types.Content(
