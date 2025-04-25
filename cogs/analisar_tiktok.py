@@ -21,11 +21,11 @@ class Analisar_Tiktok(commands.Cog):
         self.MODEL = bot.model
         self.generation_config = bot.generation_config
 
-    async def pegarImagemENomeDosVideos(username: str) -> Optional[List[Dict[str, str | bytes]]]:
-        imagens: List[Dict[str, str | bytes]] = []
+    async def pegarImagemENomeDosVideos(self, username: str) -> Optional[List[Dict[str,bytes]]]:
+        imagens = []
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True,
-                executable_path="chromium-local/chromium/chrome-linux/chrome", 
+                executable_path="chromium/chrome-linux/chrome", 
                 args=[
                     "--disable-gpu",
                     "--no-sandbox",
@@ -101,21 +101,18 @@ class Analisar_Tiktok(commands.Cog):
 
         session = httpx.AsyncClient()
 
-        session.get("https://tiktok.com/@raquisonzz")
-
-
         num = 1
         print(imagens)
-
+        valid_imagens = []
         for i, imagem in enumerate(imagens):
-            src = imagem["src"][1]
+            src = imagem["src"]
             if "://" in src:
                 response = await session.get(src)
                 if response.status_code == 200:
                     num += 1
                     print("Salvo")
-                    imagens[i]["src"] = response.content
-                    continue
+                    imagem["src"] = response.content
+                    valid_imagens.append(imagem)
                     
 
                     # baixar imagem e pros beta, vamo salvar e na memoria e fodase maximo 10mega so 
@@ -127,55 +124,68 @@ class Analisar_Tiktok(commands.Cog):
                     #     num += 1
                     #     file.write(data)
                     # continue
+
+        # os baites ai taligado
+        if len(valid_imagens) > 0:
+            imagens = valid_imagens
+            return imagens
+        return None
         
-        print("==="*20)
-        print(len([imagenscomsrc["src"] for imagenscomsrc in imagens if "https://" in imagenscomsrc["src"]]))
-        return imagens
+        
+        
     
 
     # pedaco de codigo roubado do /analisar q realmente esta muito baguncado
-    async def DividirTextoEmPartes(texto: str) -> List[str]:
-        textos = textwrap.wrap(texto, 2000)
-        for text in textos:
-            # sanitiza a resposta do modelo para evitar menções ativas
-            sanitized_text = text
-            return sanitized_text
+    def DividirTextoEmPartes(self, texto: str) -> List[str]:
+        textos = textwrap.wrap(
+            texto,
+            width=1900,
+            break_long_words=False,
+            break_on_hyphens=False
+        )
+        return textos
 
     @app_commands.command(name="analisar_tiktok", description="Comando para analisar tiktok de uma pessoa || BETA")
     async def analisar_tiktok(self, inter: discord.Interaction, username: str):
-        await inter.response.defer(thinking=True)
-        embed = discord.Embed(title=username, description="Analisando o perfil do tiktok, isso pode demorar um pouco...", color=discord.Color.orange())
-        await inter.followup.send(embed=embed)
-        videos_imagens = await self.pegarImagemENomeDosVideos(username)
-        videos_contents = [
-            types.Content(
-                parts=[
-                    types.Part.from_text("Video: " + video["alt"]),
-                    types.Part.from_bytes(
-                        video["src"],
-                        mime_type="image/jpeg",
-                    )
+        await inter.response.defer()
+        try:
+            embed = discord.Embed(title=username, description="Analisando o perfil do tiktok, isso pode demorar um pouco...", color=discord.Color.orange())
+            await inter.followup.send(embed=embed)
+            videos_imagens = await self.pegarImagemENomeDosVideos(username)
+            videos_contents = [
+                types.Content(
+                    parts=[
+                        types.Part.from_text(text="Video: " + video["alt"]),
+                        types.Part.from_bytes(
+                            data=video["src"],
+                            mime_type="image/jpeg",
+                        )
+                        
+                    ],
+                    role="user"
                     
-                ]
-                
-            )for video in videos_imagens
-        ]
-        prompt_content = [
-            types.Content(
-                parts=[
-                    types.Part.from_text(f"Analise o Perfil do tiktok de {username} e seus republicados e de seu veredito:")
-                ]
+                )for video in videos_imagens
+            ]
+            prompt_content = [
+                types.Content(
+                    parts=[
+                        types.Part.from_text(text=f"Analise o Perfil do tiktok de {username} e seus republicados e de seu veredito:")
+                    ],
+                    role="user"
+                )
+            ]
+            print([*videos_contents, *prompt_content])
+            resposta = await self.client.aio.models.generate_content(
+                model=self.MODEL,
+                contents=[*videos_contents, *prompt_content],
+                config=self.generation_config
             )
-        ]
-        resposta = await self.client.aio.models.generate_content(
-            model=self.MODEL,
-            contents=[*videos_contents, *prompt_content],
-            config=self.generation_config
-        )
-        partesparaodiscord = self.DividirTextoEmPartes(resposta.text)
+            partesparaodiscord = self.DividirTextoEmPartes(texto=resposta.text)
 
-        for parte in partesparaodiscord:
-            await inter.response.send(parte)
+            for parte in partesparaodiscord:
+                await inter.followup.send(parte)
+        except Exception as e:
+            embed = discord.Embed(title="Ocorreu um Erro", description="```py\n" + str(e) + "\n```")
         
 
 async def setup(bot):

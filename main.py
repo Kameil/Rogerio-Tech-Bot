@@ -6,7 +6,7 @@ import os
 from google import genai as geneai
 from google.genai import types
 from config import api_key, token
-
+from PIL import Image
 genai_client = geneai.Client(api_key=api_key)
 
 SYSTEM_INSTRUCTION = """ 
