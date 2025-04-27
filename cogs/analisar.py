@@ -17,11 +17,8 @@ class Analisar(commands.Cog):
         self.httpClient = bot.httpclient
         self.client = bot.client
 
-    # funcao p/ substituir mencoes ativas por texto simples
     def mencao(self, content: str, guild: discord.Guild) -> str:
-        """Substitui menções ativas (<@ID>) por nomes de usuário (ex.: @Nome) no texto."""
         for member in guild.members:
-            # substitui menções com ou sem o '!' (ex.: <@ID> ou <@!ID>)
             mention = f"<@!{member.id}>"
             if mention in content:
                 content = content.replace(mention, f"@{member.name}")
@@ -35,7 +32,6 @@ class Analisar(commands.Cog):
         if not inter.response.is_done():
             await inter.response.defer()
 
-        # verifica se o comando foi executado em uma dm
         if isinstance(inter.channel, discord.DMChannel):
             return await inter.followup.send("Esse comando só pode ser executado em um servidor.")
 
@@ -46,8 +42,9 @@ class Analisar(commands.Cog):
             # itera sobre os canais de texto do servidor
             for channel in inter.guild.text_channels:
                 bot_permissions = channel.permissions_for(inter.guild.me)
-                # ignora canais sem permissão de leitura de histórico
-                if not bot_permissions.read_message_history:
+                user_permissions = channel.permissions_for(inter.user)
+                # ignora canais sem permissão de leitura de histórico para o bot ou sem acesso para o usuário
+                if not bot_permissions.read_message_history or not user_permissions.read_messages:
                     continue
 
                 # coleta até 'mpc' mensagens do canal
@@ -55,21 +52,17 @@ class Analisar(commands.Cog):
                     if message.author == user:
                         horario_utc = message.created_at
                         horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
-                        # sanitiza o conteúdo da mensagem para evitar menções ativas
                         sanitized_content = self.mencao(message.content, inter.guild)
-                        # adiciona a mensagem sanitizada à lista
                         messages.append(
                             f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às '
                             f'{horario_local.strftime("%H:%M:%S %d/%m/%Y")}'
                         )
 
-            # configura o prompt base para análise
             prompt_probot = f"Analise esse usuário com base no seu nome e na sua imagem de perfil e diga se ele é desenrolado ou não. Nome: {user.name}\n"
             if prompt is not None:
                 prompt_probot = f"Analise {prompt} | Nome do usuário: {user.name}, Mensagens do usuário:\n"
             print(prompt_probot)
 
-            # adiciona as mensagens coletadas ao prompt
             prompt_probot += "\n".join(messages)
 
             # obtém a imagem de perfil do usuário
