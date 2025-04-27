@@ -99,35 +99,22 @@ class Resumir(commands.Cog):
         privado="Enviar o resumo só para você (padrão: não)."
     )
     async def resumir(self, inter: discord.Interaction, limite: int = 100, usuario: discord.User = None, privado: bool = False):
-        # adia a resposta imediatamente para evitar timeout
-        if not inter.response.is_done():
-            await inter.response.defer(thinking=True)
-
         try:
-            # verifica se o bot tem permissão para ler mensagens
+            # resposta imedia
+            await inter.response.defer(thinking=True, ephemeral=True)
+
+            # verificar permissões
             permissoes = inter.channel.permissions_for(inter.guild.me)
             if not permissoes.read_message_history:
-                await inter.followup.send(
-                    "Não tenho permissão para ler mensagens neste canal.",
-                    ephemeral=True
-                )
+                await inter.followup.send("Não tenho permissão para ler mensagens neste canal.", ephemeral=True)
                 return
 
-            # verifica se o limite é válido
+            # validar limite
             if limite < 1 or limite > 200:
-                await inter.followup.send(
-                    "O limite deve ser entre 1 e 200 mensagens.",
-                    ephemeral=True
-                )
+                await inter.followup.send("O limite deve ser entre 1 e 200 mensagens.", ephemeral=True)
                 return
 
-            # avisa que está coletando mensagens
-            await inter.followup.send(
-                "Coletando mensagens... Aguarde um pouco!",
-                ephemeral=True
-            )
-
-            # coleta mensagens com base nos parâmetros
+            # coletar mensagens
             mensagens = []
             async for mensagem in inter.channel.history(limit=limite):
                 if not mensagem.author.bot and (usuario is None or mensagem.author == usuario):
@@ -135,44 +122,28 @@ class Resumir(commands.Cog):
                     mensagens.append(texto)
 
             if not mensagens:
-                await inter.followup.send(
-                    "Não achei mensagens para resumir com esses critérios :/",
-                    ephemeral=True
-                )
+                await inter.followup.send("Não achei mensagens para resumir com esses critérios :/", ephemeral=True)
                 return
 
-            # avisa que está fazendo o resumo
-            await inter.followup.send(
-                "Fazendo o resumo... Já, já termino!",
-                ephemeral=True
-            )
-
-            # prepara o texto para o resumo
+            # preparar prompt e fazer resumo
             prompt = (
                 "Resuma essas mensagens do canal do Discord de forma simples e clara, destacando os principais "
                 "assuntos:\n\n" + "\n".join(mensagens)
             )
-
-            # faz e envia o resumo
             resumo = await self._fazer_resumo(inter, prompt)
+
+            # enviar resumo
             await self._enviar_resumo(
                 inter,
                 resumo,
                 privado=privado,
-                view=self.BotoesResumo(
-                    self.bot,
-                    inter.channel,
-                    usuario=usuario,
-                    limite=limite,
-                    autor_id=inter.user.id
-                ) if not privado else None
+                view=self.BotoesResumo(self.bot, inter.channel, usuario, limite, inter.user.id) if not privado else None
             )
 
         except Exception as erro:
-            mensagem_erro = f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}"
             await inter.followup.send(embed=discord.Embed(
                 title="Erro",
-                description=mensagem_erro,
+                description=f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}",
                 color=discord.Color.red()
             ), ephemeral=True)
 
