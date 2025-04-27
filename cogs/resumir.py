@@ -2,7 +2,6 @@ from discord.ext import commands
 from discord import app_commands
 import discord
 import asyncio
-import datetime
 
 
 class Resumir(commands.Cog):
@@ -13,13 +12,12 @@ class Resumir(commands.Cog):
         self.cliente = bot.client
 
     class BotoesResumo(discord.ui.View):
-        def __init__(self, bot, canal, usuario=None, limite=100, tempo=None, autor_id=None):
+        def __init__(self, bot, canal, usuario=None, limite=100, autor_id=None):
             super().__init__(timeout=300)  # 5 minutos para os botões funcionarem
             self.bot = bot
             self.canal = canal
             self.usuario = usuario
             self.limite = limite
-            self.tempo = tempo
             self.autor_id = autor_id
 
         @discord.ui.button(label="Mais Detalhes", style=discord.ButtonStyle.primary)
@@ -70,11 +68,7 @@ class Resumir(commands.Cog):
 
         async def _coletar_mensagens(self, interacao: discord.Interaction):
             mensagens = []
-            data_inicio = None
-            if self.tempo:
-                data_inicio = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=self.tempo)
-
-            async for mensagem in self.canal.history(limit=self.limite, after=data_inicio):
+            async for mensagem in self.canal.history(limit=self.limite):
                 if not mensagem.author.bot and (self.usuario is None or mensagem.author == self.usuario):
                     texto = f"{mensagem.author.display_name}: {mensagem.content}"
                     mensagens.append(texto)
@@ -101,11 +95,10 @@ class Resumir(commands.Cog):
     @app_commands.command(name="resumir", description="Faz um resumo das mensagens recentes do canal.")
     @app_commands.describe(
         limite="Quantas mensagens coletar (máximo 200, padrão 100).",
-        tempo="Horas para coletar mensagens (ex.: 24 para últimas 24h).",
         usuario="Resumir só mensagens de um usuário (opcional).",
         privado="Enviar o resumo só para você (padrão: não)."
     )
-    async def resumir(self, inter: discord.Interaction, limite: int = 100, tempo: int = None, usuario: discord.User = None, privado: bool = False):
+    async def resumir(self, inter: discord.Interaction, limite: int = 100, usuario: discord.User = None, privado: bool = False):
         # adia a resposta imediatamente para evitar timeout
         if not inter.response.is_done():
             await inter.response.defer(thinking=True)
@@ -115,7 +108,7 @@ class Resumir(commands.Cog):
             permissoes = inter.channel.permissions_for(inter.guild.me)
             if not permissoes.read_message_history:
                 await inter.followup.send(
-                    "Não tenho permissão para ler mensagens neste canal!",
+                    "Não tenho permissão para ler mensagens neste canal.",
                     ephemeral=True
                 )
                 return
@@ -123,15 +116,7 @@ class Resumir(commands.Cog):
             # verifica se o limite é válido
             if limite < 1 or limite > 200:
                 await inter.followup.send(
-                    "O limite deve ser entre 1 e 200 mensagens!",
-                    ephemeral=True
-                )
-                return
-
-            # verifica se o tempo é válido
-            if tempo is not None and tempo < 1:
-                await inter.followup.send(
-                    "O tempo deve ser maior que 0 horas!",
+                    "O limite deve ser entre 1 e 200 mensagens.",
                     ephemeral=True
                 )
                 return
@@ -144,11 +129,7 @@ class Resumir(commands.Cog):
 
             # coleta mensagens com base nos parâmetros
             mensagens = []
-            data_inicio = None
-            if tempo:
-                data_inicio = datetime.datetime.now(datetime.timezone.utc) - datetime.timedelta(hours=tempo)
-
-            async for mensagem in inter.channel.history(limit=limite, after=data_inicio):
+            async for mensagem in inter.channel.history(limit=limite):
                 if not mensagem.author.bot and (usuario is None or mensagem.author == usuario):
                     texto = f"{mensagem.author.display_name}: {mensagem.content}"
                     mensagens.append(texto)
@@ -183,7 +164,6 @@ class Resumir(commands.Cog):
                     inter.channel,
                     usuario=usuario,
                     limite=limite,
-                    tempo=tempo,
                     autor_id=inter.user.id
                 ) if not privado else None
             )
