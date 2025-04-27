@@ -48,11 +48,19 @@ class Resumir(commands.Cog):
                 # corrigido: não passa view no mais_detalhes, resumo detalhado não precisa de botões
                 await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=self.privado)
             except Exception as erro:
-                await interacao.followup.send(embed=discord.Embed(
-                    title="Erro",
-                    description=f"Deu erro ao fazer resumo detalhado: {str(erro)}\nTipo do erro: {type(erro).__name__}",
-                    color=discord.Color.red()
-                ), ephemeral=True)
+                try:
+                    await interacao.followup.send(embed=discord.Embed(
+                        title="Erro",
+                        description=f"Deu erro ao fazer resumo detalhado: {str(erro)}\nTipo do erro: {type(erro).__name__}",
+                        color=discord.Color.red()
+                    ), ephemeral=True)
+                except discord.errors.NotFound:
+                    # se o webhook estiver inválido, tenta enviar diretamente no canal
+                    await interacao.channel.send(embed=discord.Embed(
+                        title="Erro",
+                        description=f"Deu erro ao fazer resumo detalhado: {str(erro)}\nTipo do erro: {type(erro).__name__}",
+                        color=discord.Color.red()
+                    ))
 
         async def _coletar_mensagens(self, interacao: discord.Interaction):
             mensagens = []
@@ -74,20 +82,25 @@ class Resumir(commands.Cog):
     async def _enviar_resumo(self, inter: discord.Interaction, resumo: str, privado: bool, view: discord.ui.View = None):
         # envia o resumo, dividindo se for muito longo (limite de 1900 caracteres)
         # corrigido: simplificado para sempre aceitar view=None sem erros
-        if len(resumo) > 1900:
-            partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
-            for i, parte in enumerate(partes):
-                # só passa view na última parte e se view existir
+        try:
+            if len(resumo) > 1900:
+                partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
+                for i, parte in enumerate(partes):
+                    # só passa view na última parte e se view existir
+                    kwargs = {'ephemeral': privado}
+                    if view and i == len(partes) - 1:
+                        kwargs['view'] = view
+                    await inter.followup.send(parte, **kwargs)
+            else:
+                # passa view só se existir
                 kwargs = {'ephemeral': privado}
-                if view and i == len(partes) - 1:
+                if view:
                     kwargs['view'] = view
-                await inter.followup.send(parte, **kwargs)
-        else:
-            # passa view só se existir
-            kwargs = {'ephemeral': privado}
-            if view:
-                kwargs['view'] = view
-            await inter.followup.send(resumo, **kwargs)
+                await inter.followup.send(resumo, **kwargs)
+        except discord.errors.NotFound:
+            # se o webhook estiver inválido, tenta enviar diretamente no canal
+            kwargs = {'view': view} if view else {}
+            await inter.channel.send(resumo, **kwargs)
 
     @app_commands.command(name="resumir", description="Faz um resumo das mensagens recentes do canal.")
     @app_commands.describe(
@@ -97,18 +110,24 @@ class Resumir(commands.Cog):
     )
     async def resumir(self, inter: discord.Interaction, limite: int = 100, usuario: discord.User = None, privado: bool = False):
         try:
-            # resposta imediata
+            # resposta imediata para evitar expiração da interação
             await inter.response.defer(thinking=True, ephemeral=privado)
 
             # verificar permissões
             permissoes = inter.channel.permissions_for(inter.guild.me)
             if not permissoes.read_message_history:
-                await inter.followup.send("Não tenho permissão para ler mensagens neste canal.", ephemeral=True)
+                try:
+                    await inter.followup.send("Não tenho permissão para ler mensagens neste canal.", ephemeral=True)
+                except discord.errors.NotFound:
+                    await inter.channel.send("Não tenho permissão para ler mensagens neste canal.")
                 return
 
             # validar limite
             if limite < 1 or limite > 200:
-                await inter.followup.send("O limite deve ser entre 1 e 200 mensagens.", ephemeral=True)
+                try:
+                    await inter.followup.send("O limite deve ser entre 1 e 200 mensagens.", ephemeral=True)
+                except discord.errors.NotFound:
+                    await inter.channel.send("O limite deve ser entre 1 e 200 mensagens.")
                 return
 
             # coletar mensagens
@@ -119,7 +138,10 @@ class Resumir(commands.Cog):
                     mensagens.append(texto)
 
             if not mensagens:
-                await inter.followup.send("Não achei mensagens para resumir com esses critérios :/", ephemeral=True)
+                try:
+                    await inter.followup.send("Não achei mensagens para resumir com esses critérios :/", ephemeral=True)
+                except discord.errors.NotFound:
+                    await inter.channel.send("Não achei mensagens para resumir com esses critérios :/")
                 return
 
             # preparar prompt e fazer resumo
@@ -141,12 +163,19 @@ class Resumir(commands.Cog):
             )
 
         except Exception as erro:
-            await inter.followup.send(embed=discord.Embed(
-                title="Erro",
-                description=f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}",
-                color=discord.Color.red()
-            ), ephemeral=True)
-
+            try:
+                await inter.followup.send(embed=discord.Embed(
+                    title="Erro",
+                    description=f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}",
+                    color=discord.Color.red()
+                ), ephemeral=True)
+            except discord.errors.NotFound:
+                # se o webhook estiver inválido, envia diretamente no canal
+                await inter.channel.send(embed=discord.Embed(
+                    title="Erro",
+                    description=f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}",
+                    color=discord.Color.red()
+                ))
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Resumir(bot))
