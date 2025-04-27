@@ -12,13 +12,14 @@ class Resumir(commands.Cog):
         self.cliente = bot.client
 
     class BotoesResumo(discord.ui.View):
-        def __init__(self, bot, canal, usuario=None, limite=100, autor_id=None):
+        def __init__(self, bot, canal, usuario=None, limite=100, autor_id=None, privado=False):
             super().__init__(timeout=150)  # um tempo ai para os botões funcionarem
             self.bot = bot
             self.canal = canal
             self.usuario = usuario
             self.limite = limite
             self.autor_id = autor_id
+            self.privado = privado  # armazena se a interação é privada
 
         @discord.ui.button(label="Mais Detalhes", style=discord.ButtonStyle.primary)
         async def mais_detalhes(self, interacao: discord.Interaction, botao: discord.ui.Button):
@@ -37,7 +38,7 @@ class Resumir(commands.Cog):
                     return
 
                 # deferir a resposta para indicar que está processando
-                await interacao.response.defer(thinking=True, ephemeral=False)
+                await interacao.response.defer(thinking=True, ephemeral=self.privado)  # respeita a privacidade
 
                 prompt = (
                     "Resuma essas mensagens do canal do Discord com mais detalhes, incluindo exemplos e contexto dos "
@@ -45,7 +46,7 @@ class Resumir(commands.Cog):
                 )
                 resumo = await self.bot.get_cog("Resumir")._fazer_resumo(interacao, prompt)
                 # corrigido: não passa view no mais_detalhes, resumo detalhado não precisa de botões
-                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=False)
+                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=self.privado)
             except Exception as erro:
                 await interacao.followup.send(embed=discord.Embed(
                     title="Erro",
@@ -128,8 +129,8 @@ class Resumir(commands.Cog):
             )
             resumo = await self._fazer_resumo(inter, prompt)
 
-            # criar view apenas se não for privado
-            view = self.BotoesResumo(self.bot, inter.channel, usuario, limite, inter.user.id) if not privado else None
+            # criar view sempre, passando o parâmetro privado
+            view = self.BotoesResumo(self.bot, inter.channel, usuario, limite, inter.user.id, privado=privado)
 
             # enviar resumo
             await self._enviar_resumo(
