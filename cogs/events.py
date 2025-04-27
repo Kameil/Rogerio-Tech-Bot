@@ -1,4 +1,4 @@
-import discord 
+import discord
 from discord.ext import commands
 from discord import app_commands
 import httpx
@@ -9,8 +9,8 @@ from io import BytesIO
 import asyncio
 from asyncio import Queue
 import textwrap
-
 from google.genai import types
+
 
 class Chat(commands.Cog):
     def __init__(self, bot):
@@ -25,6 +25,7 @@ class Chat(commands.Cog):
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        # ignora mensagens efêmeras e de bots
         if not message.flags.ephemeral and not message.author.bot:
             if message.guild is None:
                 rogerioPermissoes = message.channel.permissions_for(self.bot.user)
@@ -33,9 +34,9 @@ class Chat(commands.Cog):
 
             channel_id = str(message.channel.id)
 
-            if (f"<@{self.bot.user.id}>" in message.content or 
-                isinstance(message.channel, discord.DMChannel) or 
-                self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
+            if (f"<@{self.bot.user.id}>" in message.content or
+                    isinstance(message.channel, discord.DMChannel) or
+                    self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
                 if self.message_queue.get(channel_id) is None:
                     self.message_queue[channel_id] = Queue()
 
@@ -67,8 +68,8 @@ class Chat(commands.Cog):
                 #         img.save(img_buffer, format="PNG")
                 #         b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
                 #         images.append({'mime_type': 'image/png', 'data': b64_encoded})
-                raise("Leitor de pdf desativado por enquanto.")
-            elif attachment.content_type.startswith("text/plain"): 
+                raise Exception("Leitor de pdf desativado por enquanto.")
+            elif attachment.content_type.startswith("text/plain"):
                 response = await self.httpClient.get(attachment.url)
                 response.raise_for_status()
                 try:
@@ -87,18 +88,27 @@ class Chat(commands.Cog):
                 self.processing[channel_id] = True
 
                 if channel_id not in self.chats:
-                    self.chats[channel_id] = self.client.aio.chats.create(model=self.model, config=self.generation_config)
+                    self.chats[channel_id] = self.client.aio.chats.create(
+                        model=self.model,
+                        config=self.generation_config
+                    )
                 chat = self.chats[channel_id]
 
-                atividades = [atividade.name for atividade in message.author.activities] if not isinstance(message.channel, discord.DMChannel) and message.author.activities else []
+                atividades = [atividade.name for atividade in message.author.activities] if not isinstance(
+                    message.channel, discord.DMChannel) and message.author.activities else []
 
                 referenced_content = ""
                 if message.reference:
                     referenced_message = await message.channel.fetch_message(message.reference.message_id)
                     if referenced_message.author.id == self.bot.user.id:
-                        referenced_content = f" (em resposta a uma solicitação anterior: '{referenced_message.content}' de {referenced_message.author.name})"
+                        referenced_content = (
+                            f" (em resposta a uma solicitação anterior: '{referenced_message.content}' de "
+                            f"{referenced_message.author.name})"
+                        )
                     else:
-                        referenced_content = f" (em resposta a: '{referenced_message.content}' de {referenced_message.author.name})"
+                        referenced_content = (
+                            f" (em resposta a: '{referenced_message.content}' de {referenced_message.author.name})"
+                        )
 
                 prompt = f'Informaçoes: Mensagem de "{message.author.display_name}"'
                 if atividades:
@@ -114,10 +124,14 @@ class Chat(commands.Cog):
                     if images:
                         prompt = [prompt] + images
                     if text_file_content:
-                        prompt += f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do usuário com base nesse conteúdo. Se o usuário não fornecer uma instrução clara, descreva o conteúdo do arquivo de forma natural, engraçada e irônica.\n\nConteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
+                        prompt += (
+                            f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do "
+                            f"usuário com base nesse conteúdo. Se o usuário não fornecer uma instrução clara, descreva "
+                            f"o conteúdo do arquivo de forma natural, engraçada e irônica.\n\n"
+                            f"Conteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
+                        )
 
-                    # fodase o stream 
-
+                    # fodase o stream
                     _response = await chat.send_message(message=prompt)
 
                 # dividir tb
@@ -125,28 +139,28 @@ class Chat(commands.Cog):
                     lines = text.split('\n')  # dividir p quebrar a linha
                     messages = []
                     current_message = ""
-                    
+
                     for line in lines:
-                        # veriica se passou o limite
+                        # verifica se passou o limite
                         if len(current_message) + len(line) + 1 <= max_length:
                             current_message += line + '\n'
                         else:
                             # se a msg n tiver vazia adiciona a lista
                             if current_message:
                                 messages.append(current_message.rstrip('\n'))
-                            # inicia  aconversa na linha atual
+                            # inicia a conversa na linha atual
                             current_message = line + '\n'
-                    
+
                     # add a ultima mensagem, se tiver
                     if current_message:
                         messages.append(current_message.rstrip('\n'))
-                    
+
                     return messages
 
                 _responseDividida = split_message(_response.text)
 
                 for _m in _responseDividida:
-                    mensagem_enviada = await message.reply(_m, mention_author=False)
+                    await message.reply(_m, mention_author=False)
 
                 self.message_queue[channel_id].task_done()
 
@@ -154,10 +168,18 @@ class Chat(commands.Cog):
                 self.message_queue[channel_id].task_done()
                 if isinstance(e, discord.HTTPException) and e.status == 429:
                     await asyncio.sleep(2)
-                    embed = discord.Embed(title="Rate Limit Excedido", description="Aguarde um momento, estou enviando muitas mensagens rápido demais!", color=discord.Color.yellow())
+                    embed = discord.Embed(
+                        title="Rate Limit Excedido",
+                        description="Aguarde um momento, estou enviando muitas mensagens rápido demais!",
+                        color=discord.Color.yellow()
+                    )
                     await message.channel.send(embed=embed)
                 else:
-                    embed = discord.Embed(title="Ocorreu Um Erro!", description=f"\n```py\n{str(e)}\n```", color=discord.Color.red())
+                    embed = discord.Embed(
+                        title="Ocorreu Um Erro!",
+                        description=f"\n```py\n{str(e)}\n```",
+                        color=discord.Color.red()
+                    )
                     await message.channel.send(embed=embed)
 
             finally:
@@ -165,5 +187,7 @@ class Chat(commands.Cog):
                 if not self.message_queue[channel_id].empty():
                     await self.process_queue(channel_id)
 
+
 async def setup(bot):
+    # adiciona o cog ao bot
     await bot.add_cog(Chat(bot))

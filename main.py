@@ -1,4 +1,3 @@
-from time import sleep
 import discord
 from discord.ext import commands
 import httpx
@@ -47,23 +46,25 @@ bot.client = genai_client
 
 @bot.event
 async def on_ready():
+    from time import sleep
     for file in os.listdir("cogs"):
         if file.endswith(".py"):
             await bot.load_extension(f"cogs.{file[:-3]}")
     
     synced_commands = await bot.tree.sync()
+    sleep(0.3)
     print("=== Inicialização do Rogerio Tech ===")
-    sleep(1)
+    sleep(0.5)
     print(f"Comandos sincronizados: {len(synced_commands)}")
-    sleep(1)
+    sleep(0.5)
     print(f"Nome do bot: {bot.user.name}")
-    sleep(1)
+    sleep(0.5)
     print(f"ID do bot: {bot.user.id}")
-    sleep(1)
+    sleep(0.5)
     print(f"Prefixo configurado: {bot.command_prefix}")
-    sleep(1)
+    sleep(0.5)
     print(f"Modelo de IA: {bot.model}")
-    sleep(1)
+    sleep(0.5)
     print("\033[32mBot está online e pronto para uso!\033[0m")
     print("===================================")
 
