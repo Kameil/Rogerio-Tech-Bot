@@ -27,12 +27,13 @@ class Resumir(commands.Cog):
             # verifica se quem clicou é o autor do comando
             if interacao.user.id != self.autor_id:
                 await interacao.response.send_message(
-                    "Só quem usou o comando pode clicar neste botão.",
+                    "Só quem usou o comando pode clicar neste botão!",
                     ephemeral=True
                 )
                 return
 
-            await interacao.response.defer(thinking=True)
+            if not interacao.response.is_done():
+                await interacao.response.defer(thinking=True)
             try:
                 mensagens = await self._coletar_mensagens(interacao)
                 if not mensagens:
@@ -44,7 +45,7 @@ class Resumir(commands.Cog):
                     "principais assuntos:\n\n" + "\n".join(mensagens)
                 )
                 resumo = await self.bot.get_cog("Resumir")._fazer_resumo(interacao, prompt)
-                await self._enviar_resumo(interacao, resumo, privado=False)
+                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=False)
             except Exception as erro:
                 await interacao.followup.send(embed=discord.Embed(
                     title="Erro",
@@ -88,14 +89,14 @@ class Resumir(commands.Cog):
         )
         return resposta.text.strip()
 
-    async def _enviar_resumo(self, inter: discord.Interaction, resumo: str, privado: bool):
+    async def _enviar_resumo(self, inter: discord.Interaction, resumo: str, privado: bool, view=None):
         # envia o resumo, dividindo se for muito longo (limite de 1900 caracteres)
         if len(resumo) > 1900:
             partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
             for parte in partes:
-                await inter.followup.send(parte, ephemeral=privado)
+                await inter.followup.send(parte, ephemeral=privado, view=view if parte == partes[-1] else None)
         else:
-            await inter.followup.send(resumo, ephemeral=privado)
+            await inter.followup.send(resumo, ephemeral=privado, view=view)
 
     @app_commands.command(name="resumir", description="Faz um resumo das mensagens recentes do canal.")
     @app_commands.describe(
@@ -105,15 +106,16 @@ class Resumir(commands.Cog):
         privado="Enviar o resumo só para você (padrão: não)."
     )
     async def resumir(self, inter: discord.Interaction, limite: int = 100, tempo: int = None, usuario: discord.User = None, privado: bool = False):
-        # adia a resposta enquanto processa
-        await inter.response.defer(thinking=True)
+        # adia a resposta imediatamente para evitar timeout
+        if not inter.response.is_done():
+            await inter.response.defer(thinking=True)
 
         try:
             # verifica se o bot tem permissão para ler mensagens
             permissoes = inter.channel.permissions_for(inter.guild.me)
             if not permissoes.read_message_history:
                 await inter.followup.send(
-                    "Não tenho permissão para ler mensagens neste canal...",
+                    "Não tenho permissão para ler mensagens neste canal!",
                     ephemeral=True
                 )
                 return
@@ -121,7 +123,7 @@ class Resumir(commands.Cog):
             # verifica se o limite é válido
             if limite < 1 or limite > 200:
                 await inter.followup.send(
-                    "O limite deve ser entre 1 e 200 mensagens.",
+                    "O limite deve ser entre 1 e 200 mensagens!",
                     ephemeral=True
                 )
                 return
@@ -129,7 +131,7 @@ class Resumir(commands.Cog):
             # verifica se o tempo é válido
             if tempo is not None and tempo < 1:
                 await inter.followup.send(
-                    "O tempo deve ser maior que 0 horas.",
+                    "O tempo deve ser maior que 0 horas!",
                     ephemeral=True
                 )
                 return
@@ -196,4 +198,5 @@ class Resumir(commands.Cog):
 
 
 async def setup(bot: commands.Bot):
+    # adiciona o cog ao bot
     await bot.add_cog(Resumir(bot))
