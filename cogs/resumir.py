@@ -3,6 +3,7 @@ from discord import app_commands
 import discord
 import asyncio
 
+
 class Resumir(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
@@ -12,13 +13,17 @@ class Resumir(commands.Cog):
 
     @app_commands.command(name="resumir", description="Resume as mensagens recentes do canal atual.")
     async def resumir(self, inter: discord.Interaction):
-        await inter.response.defer(thinking=True)  # adia a resposta p/ processamento
+        # adia a resposta p/ processamento
+        await inter.response.defer(thinking=True)
 
         try:
             # verifica se o bot tem permissão para ler mensagens
             permissoes = inter.channel.permissions_for(inter.guild.me)
             if not permissoes.read_message_history:
-                await inter.followup.send("Não tenho permissão para ler o histórico de mensagens neste canal!", ephemeral=True)
+                await inter.followup.send(
+                    "Não tenho permissão para ler o histórico de mensagens neste canal!",
+                    ephemeral=True
+                )
                 return
 
             # coleta as últimas 100 mensagens do canal
@@ -34,8 +39,8 @@ class Resumir(commands.Cog):
 
             # prepara o prompt para o resumo
             prompt = (
-                "Resuma as seguintes mensagens do canal do Discord de forma concisa e clara, destacando os principais tópicos discutidos:\n\n"
-                + "\n".join(mensagens)
+                "Resuma as seguintes mensagens do canal do Discord de forma concisa e clara, destacando os principais "
+                "tópicos discutidos:\n\n" + "\n".join(mensagens)
             )
 
             # gera o resumo diretamente, sem sessão
@@ -49,7 +54,7 @@ class Resumir(commands.Cog):
             # envia o resumo
             resumo = resposta.text.strip()
             if len(resumo) > 1900:  # lida com resumos longos
-                partes = [resumo[i:i+1900] for i in range(0, len(resumo), 1900)]
+                partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
                 for parte in partes:
                     await inter.followup.send(parte)
             else:
@@ -63,5 +68,7 @@ class Resumir(commands.Cog):
                 color=discord.Color.red()
             ), ephemeral=True)
 
+
 async def setup(bot: commands.Bot):
+    # adiciona o cog ao bot
     await bot.add_cog(Resumir(bot))
