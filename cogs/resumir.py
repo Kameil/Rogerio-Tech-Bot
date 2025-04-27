@@ -44,6 +44,7 @@ class Resumir(commands.Cog):
                     "principais assuntos:\n\n" + "\n".join(mensagens)
                 )
                 resumo = await self.bot.get_cog("Resumir")._fazer_resumo(interacao, prompt)
+                # corrigido: não passa view no mais_detalhes, resumo detalhado não precisa de botões
                 await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=False)
             except Exception as erro:
                 await interacao.followup.send(embed=discord.Embed(
@@ -71,15 +72,21 @@ class Resumir(commands.Cog):
 
     async def _enviar_resumo(self, inter: discord.Interaction, resumo: str, privado: bool, view: discord.ui.View = None):
         # envia o resumo, dividindo se for muito longo (limite de 1900 caracteres)
+        # corrigido: simplificado para sempre aceitar view=None sem erros
         if len(resumo) > 1900:
             partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
             for i, parte in enumerate(partes):
-                # envia a última parte com o view, se tiver
-                # corrigido: verifica se view é None para evitar TypeError
-                await inter.followup.send(parte, ephemeral=privado, view=view if (i == len(partes) - 1 and view is not None) else None)
+                # só passa view na última parte e se view existir
+                kwargs = {'ephemeral': privado}
+                if view and i == len(partes) - 1:
+                    kwargs['view'] = view
+                await inter.followup.send(parte, **kwargs)
         else:
-            # corrigido: passa view apenas se não for None
-            await inter.followup.send(resumo, ephemeral=privado, view=view if view is not None else None)
+            # passa view só se existir
+            kwargs = {'ephemeral': privado}
+            if view:
+                kwargs['view'] = view
+            await inter.followup.send(resumo, **kwargs)
 
     @app_commands.command(name="resumir", description="Faz um resumo das mensagens recentes do canal.")
     @app_commands.describe(
@@ -121,7 +128,7 @@ class Resumir(commands.Cog):
             )
             resumo = await self._fazer_resumo(inter, prompt)
 
-            # criar view para botões, mesmo em mensagens privadas, se desejar
+            # criar view apenas se não for privado
             view = self.BotoesResumo(self.bot, inter.channel, usuario, limite, inter.user.id) if not privado else None
 
             # enviar resumo
