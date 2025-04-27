@@ -44,12 +44,11 @@ class Resumir(commands.Cog):
             )
 
             # gera o resumo diretamente, sem sessão
-            async with inter.channel.typing():
-                resposta = await self.client.aio.models.generate_content(
-                    model=self.model,
-                    contents=prompt,
-                    config=self.generation_config
-                )
+            resposta = await self.client.aio.models.generate_content(
+                model=self.model,
+                contents=prompt,
+                config=self.generation_config
+            )
 
             # envia o resumo
             resumo = resposta.text.strip()
