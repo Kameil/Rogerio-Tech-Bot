@@ -13,7 +13,7 @@ class Resumir(commands.Cog):
 
     class BotoesResumo(discord.ui.View):
         def __init__(self, bot, canal, usuario=None, limite=100, autor_id=None, privado=False):
-            super().__init__(timeout=150)  # um tempo ai para os botões funcionarem
+            super().__init__(timeout=150)  # tempo para os botões funcionarem
             self.bot = bot
             self.canal = canal
             self.usuario = usuario
@@ -37,16 +37,16 @@ class Resumir(commands.Cog):
                     await interacao.response.send_message("Não achei mensagens para resumir :/", ephemeral=True)
                     return
 
-                # deferir a resposta para indicar que está processando
-                await interacao.response.defer(thinking=True, ephemeral=self.privado)  # respeita a privacidade
+                # mostrar a resposta para indicar que está processando
+                is_dm = interacao.guild is None
+                await interacao.response.defer(thinking=True, ephemeral=self.privado and not is_dm)  # respeita privacidade, exceto em dms
 
                 prompt = (
                     "Resuma essas mensagens do canal do Discord com mais detalhes, incluindo exemplos e contexto dos "
                     "principais assuntos:\n\n" + "\n".join(mensagens)
                 )
                 resumo = await self.bot.get_cog("Resumir")._fazer_resumo(interacao, prompt)
-                # corrigido: não passa view no mais_detalhes, resumo detalhado não precisa de botões
-                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=self.privado)
+                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=self.privado and not is_dm)
             except Exception as erro:
                 try:
                     await interacao.followup.send(embed=discord.Embed(
@@ -80,20 +80,22 @@ class Resumir(commands.Cog):
         return resposta.text.strip()
 
     async def _enviar_resumo(self, inter: discord.Interaction, resumo: str, privado: bool, view: discord.ui.View = None):
-        # envia o resumo, dividindo se for muito longo (limite de 1900 caracteres)
-        # corrigido: simplificado para sempre aceitar view=None sem erros
+        # em dms, não usar ephemeral, pois já é privado
+        is_dm = inter.guild is None
+        ephemeral = privado and not is_dm  # só usar ephemeral se privado=True e não for DM
+
         try:
             if len(resumo) > 1900:
                 partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
                 for i, parte in enumerate(partes):
                     # só passa view na última parte e se view existir
-                    kwargs = {'ephemeral': privado}
+                    kwargs = {'ephemeral': ephemeral}
                     if view and i == len(partes) - 1:
                         kwargs['view'] = view
                     await inter.followup.send(parte, **kwargs)
             else:
                 # passa view só se existir
-                kwargs = {'ephemeral': privado}
+                kwargs = {'ephemeral': ephemeral}
                 if view:
                     kwargs['view'] = view
                 await inter.followup.send(resumo, **kwargs)
@@ -106,21 +108,27 @@ class Resumir(commands.Cog):
     @app_commands.describe(
         limite="Quantas mensagens coletar (máximo 200, padrão 100).",
         usuario="Resumir só mensagens de um usuário (opcional).",
-        privado="Enviar o resumo só para você (padrão: não)."
+        privado="Enviar o resumo só para você (padrão: não | não é possivel usar em DMs)."
     )
     async def resumir(self, inter: discord.Interaction, limite: int = 100, usuario: discord.User = None, privado: bool = False):
         try:
+            # em dms, forçar privado=False, pois já é privado por natureza
+            is_dm = inter.guild is None
+            if is_dm:
+                privado = False
+
             # resposta imediata para evitar expiração da interação
             await inter.response.defer(thinking=True, ephemeral=privado)
 
-            # verificar permissões
-            permissoes = inter.channel.permissions_for(inter.guild.me)
-            if not permissoes.read_message_history:
-                try:
-                    await inter.followup.send("Não tenho permissão para ler mensagens neste canal.", ephemeral=True)
-                except discord.errors.NotFound:
-                    await inter.channel.send("Não tenho permissão para ler mensagens neste canal.")
-                return
+            # verificar permissões apenas em canais de servidor
+            if not is_dm:
+                permissoes = inter.channel.permissions_for(inter.guild.me)
+                if not permissoes.read_message_history:
+                    try:
+                        await inter.followup.send("Não tenho permissão para ler mensagens neste canal.", ephemeral=True)
+                    except discord.errors.NotFound:
+                        await inter.channel.send("Não tenho permissão para ler mensagens neste canal.")
+                    return
 
             # validar limite
             if limite < 1 or limite > 200:
