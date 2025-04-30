@@ -1,4 +1,4 @@
-# Rogério Tech
+<h1>Rogério Tech</h1>
 
 <p align="center">
     <img src="https://i.imgur.com/TKphVxW.png" width="250" height="250">
@@ -8,78 +8,79 @@
     <strong>🚧 AINDA EM DESENVOLVIMENTO 🚧</strong>
 </div>
 
----
+<hr>
 
-## 📝 Sobre o Projeto
+<h2>📝 Sobre o Projeto</h2>
 
-O **Rogério Tech** é um bot desenvolvido para o **Discord** que utiliza a API do Google para fornecer respostas inteligentes e funcionalidades úteis. Ele foi projetado para automatizar tarefas, responder perguntas e oferecer suporte aos usuários de forma eficiente e prática.
+O <strong>Rogério Tech</strong> é um bot desenvolvido para o <strong>Discord</strong> que utiliza a API do Google para fornecer respostas inteligentes e funcionalidades úteis. Ele foi projetado para automatizar tarefas, responder perguntas e oferecer suporte aos usuários de forma eficiente e prática.
 
----
+<hr>
 
-## ⚠️ Atenção
+<h2>⚠️ Atenção</h2>
 
 > [!CAUTION]  
-> O **único repositório oficial** é este: [Kameil/Rogerio-Tech-Bot](https://github.com/Kameil/Rogerio-Tech-Bot). Qualquer outro pode ser falso ou não confiável.
+> <strong>O único repositório oficial</strong> é este: <a href="https://github.com/Kameil/Rogerio-Tech-Bot" rel="same repository">Kameil/Rogerio-Tech-Bot</a>.
 
-Se você encontrar bugs ou tiver sugestões, por favor, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
+Se você encontrar bugs ou tiver sugestões, por favor, <a href="https://github.com/Kameil/Rogerio-Tech-Bot/issues" rel="github issues">abra uma issue</a> ou envie um <a href="https://github.com/Kameil/Rogerio-Tech-Bot/pulls" rel="github pull requests">pull request</a>.
 
----
+<hr>
 
-## ✨ Funcionalidades
+<h2>✨ Funcionalidades</h2>
+<ul type="disk"> 
+<li>🤖<strong>Respostas Inteligentes:</strong> Interação em tempo real com comandos e perguntas dos usuários.</li>
+<li>🔍<strong>Pesquisa Avançada:</strong> Acesso rápido a informações atualizadas via API do Google.</li>
+<li>📄<strong>Análise de Conteúdo:</strong> Suporte para análise de perfis, posts, links e arquivos.</li>
+<li>⚙️<strong>Customização:</strong> Flexibilidade para adaptar o bot às suas necessidades.</li>
+</ul>
 
-- 🤖 **Respostas Inteligentes:** Interação em tempo real com comandos e perguntas dos usuários.  
-- 🔍 **Pesquisa Avançada:** Acesso rápido a informações atualizadas via API do Google.  
-- 📄 **Análise de Conteúdo:** Suporte para análise de perfis, posts, links e arquivos.  
-- ⚙️ **Customização:** Flexibilidade para adaptar o bot às suas necessidades.
+<hr>
 
----
+<h2>❓ Perguntas Frequentes (FAQ)</h2>
 
-## ❓ Perguntas Frequentes (FAQ)
+<h3>O bot é confiável?</h3>
+<strong>Sim!</strong> O código-fonte é público e pode ser revisado por qualquer pessoa. Além disso, o bot não exige permissões excessivas para funcionar.
 
-### O bot é confiável?  
-**Sim!** O código-fonte é público e pode ser revisado por qualquer pessoa. Além disso, o bot não exige permissões excessivas para funcionar.
+<h3>O bot é altamente desenvolvido?</h3>
+<strong>Ainda não.</strong> Este é um projeto em fase inicial, mas com potencial para crescer com o tempo e contribuições.
 
-### O bot é altamente desenvolvido?  
-**Ainda não.** Este é um projeto em fase inicial, mas com potencial para crescer com o tempo e contribuições.
+<hr>
 
----
-
-## 📚 Documentação
+<h2>📚 Documentação</h2>
 
 Para entender melhor a API do Google integrada ao projeto, consulte:  
-- [Documentação Principal (Recomendada)](https://googleapis.github.io/python-genai/)  
-- [Guia Rápido da API Gemini](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
+- <a href="https://googleapis.github.io/python-genai/" target="_blank" rel="nofollow">Documentação Principal (Recomendada)</a>
+- <a href="https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python" target="_blank" rel="nofollow">Guia Rápido da API Gemini</a>
 
----
+<hr>
 
-## 🛠️ Tecnologias Utilizadas
+<h2>🛠️ Tecnologias Utilizadas</h2>
 
-O Rogério Tech é construído com **Python** e utiliza bibliotecas modernas (e algumas legadas). Veja todas as dependências no arquivo [`requirements.txt`](requirements.txt).
+O Rogério Tech é construído com <strong>Python</strong> e utiliza bibliotecas modernas (e algumas legadas). Veja todas as dependências no arquivo <a href="requirements.txt" target="_blank" rel="nofollow">`requirements.txt`</a>.
 
----
+<hr>
 
-## 🚀 Como Contribuir
-
-1. Faça um fork deste repositório.  
-2. Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`).  
-3. Commit suas alterações (`git commit -m "adiciona nova funcionalidade"`).  
-4. Envie um pull request!
+<h2>🚀 Como Contribuir</h2>
+<ol type="1">
+<li>Faça um fork deste repositório.</li>  
+<li>Crie uma branch para sua feature (`git checkout -b feature/nova-funcionalidade`).</li>  
+<li>Commit suas alterações (`git commit -m "adiciona nova funcionalidade"`).</li> 
+<li>Envie um pull request!</li>
+</ol>
 
 Gostou do projeto? Dê uma ⭐ no repositório para apoiar o desenvolvimento!
 
----
+<hr>
 
-## 📬 Suporte e Convite
+<h2>📬 Suporte e Convite</h2>
 
-Problemas ou dúvidas? [Abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues) ou adicione um comentário ao commit que está com problema. 
+Problemas ou dúvidas? abra uma <a href="https://github.com/Kameil/Rogerio-Tech-Bot/issues" target="_self" rel="github issues">issue</a> ou adicione um comentário ao commit que está com problema.
 
-Convide o Rogério Tech para o seu servidor:  
-[Adicionar ao Discord](https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot)
+Convide o Rogério Tech para o seu servidor clicando <em><a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot" target="_blank" rel="discord bot invite">aqui!</a></em>
 
----
+<hr>
 
 <div align="center">
   Bot criado com ❤️ por 
-  <a href="https://github.com/Kameil"><strong>Kameil</strong></a> (ideia & dev) e 
-  <a href="https://github.com/cafewhaze"><strong>g</strong></a> (ajustes & README + Wiki)
+  <a href="https://github.com/Kameil" target="_blank" rel="github"><strong>Kameil</strong></a> (ideia & dev) e
+  <a href="https://github.com/cafewhaze" target="_blank" rel="github"><strong>g</strong></a> (ajustes & README + Wiki)
 </div>
