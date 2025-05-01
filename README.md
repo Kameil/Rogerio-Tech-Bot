@@ -1,4 +1,6 @@
-<h1>Rogério Tech</h1>
+<div align="center">
+    <h1>Rogério Tech</h1>
+</div>
 
 <p align="center">
     <img src="https://i.imgur.com/TKphVxW.png" width="250" height="250">
