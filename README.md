@@ -1,3 +1,8 @@
+<p>
+  <a href="https://top.gg/bot/1041361324506087555">
+    <img src="https://top.gg/api/widget/servers/1041361324506087555.svg">
+  </a>
+</p>
 <div align="center">
     <h1>Rogério Tech</h1>
 </div>
@@ -78,6 +83,12 @@ Gostou do projeto? Dê uma ⭐ no repositório para apoiar o desenvolvimento!
 Problemas ou dúvidas? abra uma <a href="https://github.com/Kameil/Rogerio-Tech-Bot/issues" target="_self" rel="github issues">issue</a> ou adicione um comentário ao commit que está com problema.
 
 Convide o Rogério Tech para o seu servidor clicando <em><a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot" target="_blank" rel="discord bot invite">aqui!</a></em>
+
+<p align="center">
+  <a href="https://top.gg/bot/1041361324506087555">
+    <img src="https://top.gg/api/widget/1041361324506087555.svg?status">
+  </a>
+</p>
 
 <hr>
 
