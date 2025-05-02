@@ -54,7 +54,8 @@ Se você encontrar bugs ou tiver sugestões, por favor, <a href="https://github.
 
 <h2>📚 Documentação</h2>
 
-Para entender melhor a API do Google integrada ao projeto, consulte:  
+Para entender melhor a API do Google integrada ao projeto, consulte:
+
 - <a href="https://googleapis.github.io/python-genai/" target="_blank" rel="nofollow">Documentação Principal (Recomendada)</a>
 - <a href="https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python" target="_blank" rel="nofollow">Guia Rápido da API Gemini</a>
 
