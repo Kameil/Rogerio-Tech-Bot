@@ -22,7 +22,7 @@ class Chat(commands.Cog):
         self.processing = {}
         self.message_queue = {}
         self.client = bot.client
-        self.tokens_monitor = Tokens()
+        self.tokens_monitor: Tokens = bot.tokens_monitor
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
