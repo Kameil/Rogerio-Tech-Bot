@@ -70,7 +70,7 @@ class Tokens():
         if self.cursor.fetchone():
             self.cursor.execute("""
                 UPDATE tokens_usage
-                SET uso = uso + ?
+                SET uso = uso + ?,
                     requests = requests + 1
                 WHERE guild_id = ? AND dia_mes = ? AND hora = ?
             """, (uso, str(guild_id), self.dia_mes_atual, self._hora_atual))
