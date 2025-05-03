@@ -11,7 +11,7 @@ class Monitor(commands.Cog):
     async def show_tabela_de_uso(self, ctx: commands.Context):
         lista = self.tokens_monitor.get_usage_order_uso
         if lista:
-            embed_description = "\n".join(f"`guild: {guild_id} uso:{uso} `" for id, uso, dia_mes, guild_id in lista[:20])
+            embed_description = "\n".join(f"`guild: {guild.guild_id} uso:{guild.uso} `" for guild in lista[:20])
             embed = discord.Embed(title="Lista de Uso", description=embed_description)
             await ctx.send(embed=embed)
         else:
