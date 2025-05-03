@@ -51,7 +51,7 @@ class Tokens():
             """, (uso, str(guild_id), dia_mes_str))
         else:
             self.cursor.execute(
-                """INSERT INTO tokens_usage (uso, dia, dia_mes, guild_id) 
+                """INSERT INTO tokens_usage (uso, dia_mes, dia_mes, guild_id) 
                 VALUES (?, ?, ?)
                 """,
                 (uso, dia_mes, guild_id))
