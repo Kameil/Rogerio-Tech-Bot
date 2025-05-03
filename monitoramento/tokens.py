@@ -13,7 +13,15 @@ class Tokens():
         self._create_table()
     
     def _create_table(self):
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS tokens_usage (id INTEGER PRIMARY KEY AUTOINCREMENT, uso INTEGER, dia_mes TEXT, guild_id TEXT)")
+        self.cursor.execute("""
+            CREATE TABLE IF NOT EXISTS tokens_usage 
+            (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                uso INTEGER,
+                dia_mes TEXT,
+                guild_id TEXT
+            )
+        """)
         self.conn.commit()
 
     @property
@@ -33,7 +41,11 @@ class Tokens():
         return all if all else None
 
     def tokens_count(self, guild_id: int) -> Optional[Tuple]:
-        self.cursor("SELECT * FROM tokens_usage WHERE guild_id = ? ORDER BY id DESC LIMIT 1", (str(guild_id),))
+        self.cursor("""
+            SELECT * FROM tokens_usage 
+            WHERE guild_id = ? 
+            ORDER BY id DESC LIMIT 1
+        """, (str(guild_id),))
         r = self.cursor.fetchone()
         return r if r else None
     
