@@ -4,7 +4,7 @@ talvez o monitoramento precise de uma classe em
 
 import sqlite3
 from datetime import datetime
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 
 class Tokens():
     def __init__(self):
@@ -15,6 +15,22 @@ class Tokens():
     def _create_table(self):
         self.cursor.execute("CREATE TABLE IF NOT EXISTS tokens_usage (id INTEGER PRIMARY KEY AUTOINCREMENT, uso INT, dia_mes TEXT, guild_id TEXT)")
         self.conn.commit()
+
+    @property
+    def dia_mes_atual(self) -> str:
+        dia_mes = datetime.date()
+        dia_mes_str = f"{dia_mes.day}-{dia_mes.month}"
+        return dia_mes_str
+    
+    @property
+    def uso_de_tokens_order_uso(self) -> Optional[List[Tuple[int, str, str, str]]]:
+        self.cursor.execute("""
+            SELECT * FROM tokens_usage
+            WHERE dia-mes = ? 
+            ORDER BY uso DESC
+        """, (self.dia_mes_atual,))
+        all = self.cursor.fetchall()
+        return all if all else None
 
     def tokens_count(self, guild_id: int) -> Optional[Tuple]:
         self.cursor("SELECT * FROM tokens_usage WHERE guild_id = ? ORDER BY id DESC LIMIT 1", (str(guild_id),))
