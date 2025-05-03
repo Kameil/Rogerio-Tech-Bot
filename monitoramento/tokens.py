@@ -3,7 +3,7 @@ talvez o monitoramento precise de uma classe em
 """
 
 import sqlite3
-from datetime import datetime
+import datetime
 from typing import Optional, Tuple, List
 
 class Tokens():
@@ -18,7 +18,7 @@ class Tokens():
 
     @property
     def dia_mes_atual(self) -> str:
-        dia_mes = datetime.date()
+        dia_mes = datetime.date.today()
         dia_mes_str = f"{dia_mes.day}-{dia_mes.month}"
         return dia_mes_str
     
@@ -37,7 +37,7 @@ class Tokens():
         r = self.cursor.fetchone()
         return r if r else None
     
-    def insert_usage(self, uso: int, guild_id:int, dia_mes = datetime.date()):
+    def insert_usage(self, uso: int, guild_id:int, dia_mes = datetime.date.today()):
         dia_mes_str = f"{dia_mes.day}-{dia_mes.month}"
         self.cursor.execute("""
             SELECT * FROM tokens_usage
