@@ -10,7 +10,7 @@ import asyncio
 from asyncio import Queue
 import textwrap
 from google.genai import types
-
+from monitoramento import Tokens
 
 class Chat(commands.Cog):
     def __init__(self, bot):
@@ -22,6 +22,7 @@ class Chat(commands.Cog):
         self.processing = {}
         self.message_queue = {}
         self.client = bot.client
+        self.tokens_monitor = Tokens()
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
