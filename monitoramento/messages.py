@@ -3,5 +3,5 @@ import sqlite3
 import datetime
 
 class Messages():
-    def __init__(self):
+    def __init__(self, conn: sqlite3.Connection):
         pass
