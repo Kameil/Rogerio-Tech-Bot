@@ -5,17 +5,19 @@ import httpx
 import base64
 import datetime
 import textwrap
+from google import genai
 from google.genai import types
+from monitoramento import Tokens
 
 
 class Analisar(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
-        self.model = bot.model
-        self.generation_config = bot.generation_config
-        self.chats = bot.chats
-        self.httpClient = bot.httpclient
-        self.client = bot.client
+        self.bot: commands.Bot = bot
+        self.model: str = bot.model
+        self.generation_config: types.GenerateContentConfig = bot.generation_config
+        self.httpClient: httpx.AsyncClient = bot.httpclient
+        self.client: genai.Client = bot.client
+        self.tokens_monitor: Tokens = bot.tokens_monitor
 
     def mencao(self, content: str, guild: discord.Guild) -> str:
         for member in guild.members:
@@ -76,6 +78,12 @@ class Analisar(commands.Cog):
                     config=self.generation_config,
                     model=self.model
                 )
+                # adiciona o uso de tokens no banco de dados 
+                usage_metadata = response.usage_metadata
+                self.tokens_monitor.insert_usage(
+                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
+                        guild_id=message.guild.id,
+                    )
 
                 # divide a resposta em partes menores para respeitar o limite do Discord
                 textos = textwrap.wrap(response.text, 2000)

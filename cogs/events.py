@@ -9,19 +9,21 @@ from io import BytesIO
 import asyncio
 from asyncio import Queue
 import textwrap
+from google import genai
 from google.genai import types
-
+from monitoramento import Tokens
 
 class Chat(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
-        self.model = bot.model
-        self.generation_config = bot.generation_config
-        self.chats = bot.chats
-        self.httpClient = bot.httpclient
+        self.bot: commands.Bot = bot
+        self.model: str = bot.model
+        self.generation_config: types.GenerateContentConfig = bot.generation_config
+        self.chats: dict = bot.chats
+        self.httpClient: httpx.AsyncClient = bot.httpclient
         self.processing = {}
         self.message_queue = {}
-        self.client = bot.client
+        self.client: genai.Client = bot.client
+        self.tokens_monitor: Tokens = bot.tokens_monitor
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -132,7 +134,14 @@ class Chat(commands.Cog):
                         )
 
                     # fodase o stream
-                    _response = await chat.send_message(message=prompt)
+
+    
+                    _response: types.GenerateContentResponse = await chat.send_message(message=prompt)
+                    usage_metadata = _response.usage_metadata
+                    self.tokens_monitor.insert_usage(
+                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
+                        guild_id=message.guild.id,
+                    ) # adicionando no banco de dados ne 
 
                 # dividir tb
                 def split_message(text, max_length=1900):
