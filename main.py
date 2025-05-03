@@ -5,7 +5,7 @@ import os
 from google import genai
 from google.genai import types
 from config import api_key, token
-from monitoramento import Tokens
+from monitoramento import Monitor
 
 genai_client = genai.Client(api_key=api_key)
 
@@ -44,7 +44,8 @@ bot.model = MODEL_NAME
 bot.generation_config = GENERATION_CONFIG
 bot.httpclient = httpx.AsyncClient()
 bot.client = genai_client
-bot.tokens_monitor = Tokens()
+bot.monitor = Monitor()
+bot.tokens_monitor = bot.monitor.tokens_monitor
 
 @bot.event
 async def on_ready():
