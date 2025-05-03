@@ -14,7 +14,7 @@ class Analisar(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
         self.model: str = bot.model
-        self.generation_config: types.GenerationConfig = bot.generation_config
+        self.generation_config: types.GenerateContentConfig = bot.generation_config
         self.httpClient: httpx.AsyncClient = bot.httpclient
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
