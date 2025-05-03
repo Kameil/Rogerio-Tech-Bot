@@ -3,3 +3,4 @@ discloud.config
 __pycache__
 rogerio.py
 rogerio
+messages.db
