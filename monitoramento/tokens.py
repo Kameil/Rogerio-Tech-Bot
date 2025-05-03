@@ -13,7 +13,7 @@ class Tokens():
         self._create_table()
     
     def _create_table(self):
-        self.cursor.execute("CREATE TABLE IF NOT EXISTS tokens_usage (id INTEGER PRIMARY KEY AUTOINCREMENT, uso INT, dia_mes TEXT, guild_id TEXT)")
+        self.cursor.execute("CREATE TABLE IF NOT EXISTS tokens_usage (id INTEGER PRIMARY KEY AUTOINCREMENT, uso INTEGER, dia_mes TEXT, guild_id TEXT)")
         self.conn.commit()
 
     @property
@@ -23,7 +23,7 @@ class Tokens():
         return dia_mes_str
     
     @property
-    def uso_de_tokens_order_uso(self) -> Optional[List[Tuple[int, str, str, str]]]:
+    def get_usage_order_uso(self) -> Optional[List[Tuple[int, str, str, str]]]:
         self.cursor.execute("""
             SELECT * FROM tokens_usage
             WHERE dia-mes = ? 
