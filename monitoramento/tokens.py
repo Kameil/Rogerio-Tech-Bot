@@ -26,7 +26,7 @@ class Tokens():
     def get_usage_order_uso(self) -> Optional[List[Tuple[int, str, str, str]]]:
         self.cursor.execute("""
             SELECT * FROM tokens_usage
-            WHERE dia-mes = ? 
+            WHERE dia_mes = ? 
             ORDER BY uso DESC
         """, (self.dia_mes_atual,))
         all = self.cursor.fetchall()
@@ -37,24 +37,23 @@ class Tokens():
         r = self.cursor.fetchone()
         return r if r else None
     
-    def insert_usage(self, uso: int, guild_id:int, dia_mes = datetime.date.today()):
-        dia_mes_str = f"{dia_mes.day}-{dia_mes.month}"
+    def insert_usage(self, uso: int, guild_id:int):
         self.cursor.execute("""
             SELECT * FROM tokens_usage
             WHERE dia_mes = ? AND guild_id = ?
-        """, (dia_mes_str, str(guild_id)))
+        """, (self.dia_mes_atual, str(guild_id)))
         if self.cursor.fetchone():
             self.cursor.execute("""
                 UPDATE tokens_usage
                 SET uso = uso + ?
                 WHERE guild_id = ? AND dia_mes = ?
-            """, (uso, str(guild_id), dia_mes_str))
+            """, (uso, str(guild_id), self.dia_mes_atual))
         else:
             self.cursor.execute(
-                """INSERT INTO tokens_usage (uso, dia_mes, dia_mes, guild_id) 
+                """INSERT INTO tokens_usage (uso, dia_mes, guild_id) 
                 VALUES (?, ?, ?)
                 """,
-                (uso, dia_mes, guild_id))
+                (uso, self.dia_mes_atual, guild_id))
             self.conn.commit()
     
     def close(self):
