@@ -12,11 +12,10 @@ from monitoramento import Tokens
 
 class Analisar(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
-        self.model = bot.model
-        self.generation_config = bot.generation_config
-        self.chats = bot.chats
-        self.httpClient = bot.httpclient
+        self.bot: commands.Bot = bot
+        self.model: str = bot.model
+        self.generation_config: types.GenerationConfig = bot.generation_config
+        self.httpClient: httpx.AsyncClient = bot.httpclient
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
 
