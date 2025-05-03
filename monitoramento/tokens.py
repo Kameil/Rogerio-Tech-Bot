@@ -28,7 +28,7 @@ class Tokens():
                 guild_id TEXT,
                 requests INT DEFAULT 1,
                 hora TEXT,
-                dia_mes TEXT,
+                dia_mes TEXT
             )
         """)
         self.conn.commit()
