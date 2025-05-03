@@ -2,12 +2,12 @@ import discord
 from discord.ext import commands
 import httpx
 import os
-from google import genai as geneai
+from google import genai
 from google.genai import types
 from config import api_key, token
 from monitoramento import Tokens
 
-genai_client = geneai.Client(api_key=api_key)
+genai_client = genai.Client(api_key=api_key)
 
 SYSTEM_INSTRUCTION = """ 
 Nome: Rogerio Tech | Tipo: Bot de Discord | Tom: Engraçado e irônico
