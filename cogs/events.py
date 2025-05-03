@@ -133,7 +133,14 @@ class Chat(commands.Cog):
                         )
 
                     # fodase o stream
-                    _response = await chat.send_message(message=prompt)
+
+    
+                    _response: types.GenerateContentResponse = await chat.send_message(message=prompt)
+                    usage_metadata = _response.usage_metadata
+                    self.tokens_monitor.insert_usage(
+                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
+                        guild_id=message.guild.id,
+                    ) # adicionando no banco de dados ne 
 
                 # dividir tb
                 def split_message(text, max_length=1900):
