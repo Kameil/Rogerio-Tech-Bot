@@ -9,19 +9,20 @@ from io import BytesIO
 import asyncio
 from asyncio import Queue
 import textwrap
+from google import genai
 from google.genai import types
 from monitoramento import Tokens
 
 class Chat(commands.Cog):
     def __init__(self, bot):
-        self.bot = bot
-        self.model = bot.model
-        self.generation_config = bot.generation_config
-        self.chats = bot.chats
-        self.httpClient = bot.httpclient
+        self.bot: commands.Bot = bot
+        self.model: str = bot.model
+        self.generation_config: types.GenerateContentConfig = bot.generation_config
+        self.chats: dict = bot.chats
+        self.httpClient: httpx.AsyncClient = bot.httpclient
         self.processing = {}
         self.message_queue = {}
-        self.client = bot.client
+        self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
 
     @commands.Cog.listener()
