@@ -20,7 +20,7 @@ class Chat(commands.Cog):
         self.model: str = bot.model
         self.generation_config: types.GenerateContentConfig = bot.generation_config
         self.chats: dict = bot.chats
-        self.httpClient: httpx.AsyncClient = bot.httpclient
+        self.http_client: httpx.AsyncClient = bot.httpClient
         self.processing = {}
         self.message_queue = {}
         self.client: genai.Client = bot.client
@@ -31,15 +31,15 @@ class Chat(commands.Cog):
         # ignora mensagens efêmeras e de bots
         if not message.flags.ephemeral and not message.author.bot:
             if message.guild is None:
-                rogerioPermissoes = message.channel.permissions_for(self.bot.user)
+                rogerio_permissions = message.channel.permissions_for(self.bot.user)
             else:
-                rogerioPermissoes = message.channel.permissions_for(message.guild.me)
+                rogerio_permissions = message.channel.permissions_for(message.guild.me)
 
             channel_id = str(message.channel.id)
 
             if (f"<@{self.bot.user.id}>" in message.content or
                     isinstance(message.channel, discord.DMChannel) or
-                    self.bot.user in message.mentions) and rogerioPermissoes.send_messages:
+                    self.bot.user in message.mentions) and rogerio_permissions.send_messages:
                 if self.message_queue.get(channel_id) is None:
                     self.message_queue[channel_id] = Queue()
 
@@ -55,13 +55,13 @@ class Chat(commands.Cog):
 
         for attachment in attachments:
             if attachment.content_type.startswith("image/"):
-                response = await self.httpClient.get(attachment.url)
+                response = await self.http_client.get(attachment.url)
                 response.raise_for_status()
                 image = types.Part.from_bytes(data=response.content, mime_type=attachment.content_type)
                 images.append(image)
             if attachment.content_type == "application/pdf":
                 # for attachment in message.attachments:
-                #     response = await self.httpClient.get(attachment.url)
+                #     response = await self.http_client.get(attachment.url)
                 #     response.raise_for_status()
                 #     pdf_document = fitz.open(stream=response.content, filetype="pdf")
                 #     for page in pdf_document:
@@ -73,7 +73,7 @@ class Chat(commands.Cog):
                 #         images.append({'mime_type': 'image/png', 'data': b64_encoded})
                 raise Exception("Leitor de pdf desativado por enquanto.")
             elif attachment.content_type.startswith("text/plain"):
-                response = await self.httpClient.get(attachment.url)
+                response = await self.http_client.get(attachment.url)
                 response.raise_for_status()
                 try:
                     text_file_content = response.content.decode('utf-8')
@@ -91,9 +91,10 @@ class Chat(commands.Cog):
                 self.processing[channel_id] = True
 
                 if channel_id not in self.chats:
+                    # creando chat ai
                     self.chats[channel_id] = self.client.aio.chats.create(
                         model=self.model,
-                        config=self.generation_config
+                        config=self.generation_config,
                     )
                 chat = self.chats[channel_id]
 
@@ -136,9 +137,10 @@ class Chat(commands.Cog):
 
                     # fodase o stream
 
-    
+                    
                     _response: types.GenerateContentResponse = await chat.send_message(message=prompt)
                     usage_metadata = _response.usage_metadata
+                    
                     self.tokens_monitor.insert_usage(
                         uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
                         guild_id=message.guild.id if message.guild else "dm",
@@ -167,10 +169,10 @@ class Chat(commands.Cog):
 
                     return messages
 
-                _responseDividida = split_message(_response.text)
+                mensagens_divididas = split_message(_response.text)
 
-                for _m in _responseDividida:
-                    await message.reply(_m, mention_author=False)
+                for mensagem_dividida in mensagens_divididas:
+                    await message.reply(mensagem_dividida, mention_author=False)
 
             except discord.HTTPException as e:
                 if e.status == 429:
@@ -181,6 +183,8 @@ class Chat(commands.Cog):
                         color=discord.Color.yellow()
                     )
                     await message.channel.send(embed=embed)
+                else:
+                    traceback.print_exc()
             except Exception:
                     e = traceback.format_exc()
                     embed = discord.Embed(

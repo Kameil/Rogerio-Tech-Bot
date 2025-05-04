@@ -15,7 +15,7 @@ class Analisar(commands.Cog):
         self.bot: commands.Bot = bot
         self.model: str = bot.model
         self.generation_config: types.GenerateContentConfig = bot.generation_config
-        self.httpClient: httpx.AsyncClient = bot.httpclient
+        self.http_client: httpx.AsyncClient = bot.http_client
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
 
@@ -68,7 +68,7 @@ class Analisar(commands.Cog):
             prompt_probot += "\n".join(messages)
 
             # obtém a imagem de perfil do usuário
-            response = await self.httpClient.get(user.avatar.url)
+            response = await self.http_client.get(user.avatar.url)
             avatar = response.content if response.status_code == 200 else None
 
             if avatar:
