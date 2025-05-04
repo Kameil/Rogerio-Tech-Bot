@@ -20,7 +20,7 @@ class Chat(commands.Cog):
         self.model: str = bot.model
         self.generation_config: types.GenerateContentConfig = bot.generation_config
         self.chats: dict = bot.chats
-        self.http_client: httpx.AsyncClient = bot.httpClient
+        self.http_client: httpx.AsyncClient = bot.http_client
         self.processing = {}
         self.message_queue = {}
         self.client: genai.Client = bot.client
