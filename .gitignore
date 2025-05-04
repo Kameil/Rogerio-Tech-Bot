@@ -4,4 +4,4 @@ __pycache__
 rogerio.py
 rogerio
 .vscode
-messages.db
+*.db
