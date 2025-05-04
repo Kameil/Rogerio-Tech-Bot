@@ -12,6 +12,7 @@ import textwrap
 from google import genai
 from google.genai import types
 from monitoramento import Tokens
+import traceback
 
 class Chat(commands.Cog):
     def __init__(self, bot):
@@ -140,7 +141,7 @@ class Chat(commands.Cog):
                     usage_metadata = _response.usage_metadata
                     self.tokens_monitor.insert_usage(
                         uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
-                        guild_id=message.guild.id,
+                        guild_id=message.guild.id if message.guild else "dm",
                     ) # adicionando no banco de dados ne 
 
                 # dividir tb
@@ -171,11 +172,8 @@ class Chat(commands.Cog):
                 for _m in _responseDividida:
                     await message.reply(_m, mention_author=False)
 
-                self.message_queue[channel_id].task_done()
-
-            except Exception as e:
-                self.message_queue[channel_id].task_done()
-                if isinstance(e, discord.HTTPException) and e.status == 429:
+            except discord.HTTPException as e:
+                if e.status == 429:
                     await asyncio.sleep(2)
                     embed = discord.Embed(
                         title="Rate Limit Excedido",
@@ -183,15 +181,21 @@ class Chat(commands.Cog):
                         color=discord.Color.yellow()
                     )
                     await message.channel.send(embed=embed)
-                else:
+            except Exception:
+                    e = traceback.format_exc()
                     embed = discord.Embed(
                         title="Ocorreu Um Erro!",
-                        description=f"\n```py\n{str(e)}\n```",
+                        description=f"\n```py\n{e[:4000]}\n```",
                         color=discord.Color.red()
                     )
-                    await message.channel.send(embed=embed)
+                    try:
+                        await message.channel.send(embed=embed)
+                    except Exception as send_erro:
+                        print("Erro ao tentar enviar mensagem de erro:")
+                        traceback.print_exc()
 
             finally:
+                self.message_queue[channel_id].task_done()
                 self.processing[channel_id] = False
                 if not self.message_queue[channel_id].empty():
                     await self.process_queue(channel_id)
