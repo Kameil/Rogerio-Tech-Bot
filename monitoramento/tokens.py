@@ -14,8 +14,8 @@ class GuildUsage(NamedTuple):
 
 
 class Tokens():
-    def __init__(self):
-        self.conn = sqlite3.connect("messages.db")
+    def __init__(self, conn: sqlite3.Connection):
+        self.conn = conn
         self.cursor = self.conn.cursor()
         self._create_table()
     

@@ -11,11 +11,11 @@ class Monitor(commands.Cog):
     async def show_tabela_de_uso(self, ctx: commands.Context):
         lista = self.tokens_monitor.get_usage_order_uso
         if lista:
-            embed_description = "\n".join(f"`guild: {guild.guild_id} uso:{guild.uso} `" for guild in lista[:20])
+            embed_description = "\n".join(f"`guild: {guild.guild_id} uso:{guild.uso} reqts {guild.requests}`" for guild in lista[:20])
             embed = discord.Embed(title="Lista de Uso", description=embed_description)
             await ctx.send(embed=embed)
         else:
-            await ctx.send("deu bom nao pai")
+            await ctx.send("tem nao po")
 
 async def setup(bot):
     await bot.add_cog(Monitor(bot))
