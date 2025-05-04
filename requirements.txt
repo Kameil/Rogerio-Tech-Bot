@@ -1,6 +1,6 @@
-discord>=2.3.0,<=3.0.0
+discord
 httpx
 tamga
 pymupdf
 pillow
-google-genai>=1.10.0,<2.0.0
+google-genai==1.10.0
