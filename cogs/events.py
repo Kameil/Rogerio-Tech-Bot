@@ -13,8 +13,10 @@ from google import genai
 from google.genai import types
 from monitoramento import Tokens
 import traceback
+import datetime
 
 from google.genai.errors import ServerError
+from google.genai.errors import ClientError
 
 class Chat(commands.Cog):
     def __init__(self, bot):
@@ -27,9 +29,26 @@ class Chat(commands.Cog):
         self.message_queue = {}
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
+        self.timeout_users = {"Now": f"{datetime.datetime.now().minute}"} # so provisioriamente esse timeout ai
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+
+        # sitema provisorio de timeout para evitar flood
+        now = datetime.datetime.now()
+        if self.timeout_users.get("Now") != f"{now.minute}":
+            self.timeout_users = {"Now": f"{now.minute}"}
+            self.timeout_users[f"{message.author.id}"] = 1
+        else:
+            if self.timeout_users.get(f"{message.author.id}") is None:
+                self.timeout_users[f"{message.author.id}"] = 1
+            else:
+                self.timeout_users[f"{message.author.id}"] += 1
+        
+        if self.timeout_users[f"{message.author.id}"] >= 7:
+            return await message.add_reaction("⏳")
+        
+
         # ignora mensagens efêmeras e de bots
         if not message.flags.ephemeral and not message.author.bot:
             if message.guild is None:
@@ -42,6 +61,23 @@ class Chat(commands.Cog):
             if (f"<@{self.bot.user.id}>" in message.content or
                     isinstance(message.channel, discord.DMChannel) or
                     self.bot.user in message.mentions) and rogerio_permissions.send_messages:
+                
+
+                 # sitema provisorio de timeout para evitar flood
+                now = datetime.datetime.now()
+                if self.timeout_users.get("Now") != f"{now.minute}":
+                    self.timeout_users = {"Now": f"{now.minute}"}
+                    self.timeout_users[f"{message.author.id}"] = 1
+                else:
+                    if self.timeout_users.get(f"{message.author.id}") is None:
+                        self.timeout_users[f"{message.author.id}"] = 1
+                    else:
+                        self.timeout_users[f"{message.author.id}"] += 1
+                
+                if self.timeout_users[f"{message.author.id}"] >= 10:
+                    return await message.add_reaction("⏳")
+                
+                # segmento normal
                 if self.message_queue.get(channel_id) is None:
                     self.message_queue[channel_id] = Queue()
 
@@ -187,6 +223,10 @@ class Chat(commands.Cog):
                     await message.channel.send(embed=embed)
                 else:
                     traceback.print_exc()
+            except ClientError as e:
+                if e.status == 429:
+                    await message.add_reaction("⏳")
+                    # reagir se exceder o limite de requisições
             except ServerError:
                 embed = discord.Embed(
                     title="Erro do Servidor",
