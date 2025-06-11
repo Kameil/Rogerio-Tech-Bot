@@ -14,6 +14,8 @@ from google.genai import types
 from monitoramento import Tokens
 import traceback
 
+from google.genai.errors import ServerError
+
 class Chat(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
@@ -185,6 +187,13 @@ class Chat(commands.Cog):
                     await message.channel.send(embed=embed)
                 else:
                     traceback.print_exc()
+            except ServerError:
+                embed = discord.Embed(
+                    title="Erro do Servidor",
+                    description="Ocorreu um erro de Comunicação com o servidor.",
+                    color=discord.Color.red()
+                )
+                await message.channel.send(embed=embed)
             except Exception:
                     e = traceback.format_exc()
                     embed = discord.Embed(
