@@ -241,6 +241,7 @@ class Chat(commands.Cog):
                         description=f"\n```py\n{e[:4000]}\n```",
                         color=discord.Color.red()
                     )
+                    embed.set_footer(text="Suporte: https://discord.gg/XZH28BJV")
                     try:
                         await message.channel.send(embed=embed)
                     except Exception as send_erro:
