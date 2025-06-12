@@ -34,21 +34,6 @@ class Chat(commands.Cog):
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
 
-        # sitema provisorio de timeout para evitar flood
-        now = datetime.datetime.now()
-        if self.timeout_users.get("Now") != f"{now.minute}":
-            self.timeout_users = {"Now": f"{now.minute}"}
-            self.timeout_users[f"{message.author.id}"] = 1
-        else:
-            if self.timeout_users.get(f"{message.author.id}") is None:
-                self.timeout_users[f"{message.author.id}"] = 1
-            else:
-                self.timeout_users[f"{message.author.id}"] += 1
-        
-        if self.timeout_users[f"{message.author.id}"] >= 7:
-            return await message.add_reaction("⏳")
-        
-
         # ignora mensagens efêmeras e de bots
         if not message.flags.ephemeral and not message.author.bot:
             if message.guild is None:
