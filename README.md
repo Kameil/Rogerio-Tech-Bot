@@ -81,7 +81,8 @@ Gostou do projeto? Dê uma ⭐ no repositório para apoiar o desenvolvimento!
 
 <h2>📬 Suporte e Convite</h2>
 
-Problemas ou dúvidas? abra uma <a href="https://github.com/Kameil/Rogerio-Tech-Bot/issues" target="_self" rel="github issues">issue</a> ou adicione um comentário ao commit que está com problema.
+Problemas ou dúvidas? abra uma <a href="https://github.com/Kameil/Rogerio-Tech-Bot/issues" target="_self" rel="github issues">issue</a> ou adicione um comentário ao commit que está com problema. <br>
+Ou, entre no nosso servidor no <a href="https://discord.gg/H77FTb7hwH" target="_self" rel="github issues">Discord</a>!
 
 Convide o Rogério Tech para o seu servidor clicando <em><a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot" target="_blank" rel="discord bot invite">aqui!</a></em>
 
