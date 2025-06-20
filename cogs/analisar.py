@@ -113,7 +113,7 @@ class Analisar(commands.Cog):
                 description=f"Erro ao analisar usuário: {str(e)}\nTipo do erro: {type(e).__name__}",
                 color=discord.Color.red()
             )
-            embed.set_footer(text="Suporte: https://discord.gg/XZH28BJV")
+            embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
             await inter.followup.send(
                 embed=embed,
                 view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id)
@@ -153,7 +153,7 @@ class Analisar(commands.Cog):
                     description=error_message,
                     color=discord.Color.red()
                 )
-                embed.set_footer(text="Suporte: https://discord.gg/XZH28BJV")
+                embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
                 await interaction.followup.send(embed=embed, ephemeral=False)
 
     class Botoes(discord.ui.View):
@@ -209,7 +209,7 @@ class Analisar(commands.Cog):
                             description=error_message,
                             color=discord.Color.red()
                         )
-                        embed.set_footer(text="Suporte: https://discord.gg/XZH28BJV")
+                        embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
                         await interaction_select.followup.send(embed=embed, ephemeral=False)
 
                 select.callback = select_callback
