@@ -24,7 +24,7 @@ Regras:
 - Frase: Responda de forma apropriada ao contexto.
 """
 
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.0-flash"
 GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=1000,      
     temperature=0.7,             
