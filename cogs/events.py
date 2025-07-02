@@ -14,6 +14,7 @@ from google.genai import types
 from monitoramento import Tokens
 import traceback
 import datetime
+import os
 
 from google.genai.errors import ServerError
 from google.genai.errors import ClientError
@@ -30,6 +31,9 @@ class Chat(commands.Cog):
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
         self.timeout_users = {"Now": f"{datetime.datetime.now().minute}"} # so provisioriamente esse timeout ai
+
+
+
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -75,6 +79,7 @@ class Chat(commands.Cog):
     async def process_attachments(self, attachments):
         images = []
         text_file_content = None
+        pdfs = []
 
         for attachment in attachments:
             if attachment.content_type.startswith("image/"):
@@ -82,19 +87,19 @@ class Chat(commands.Cog):
                 response.raise_for_status()
                 image = types.Part.from_bytes(data=response.content, mime_type=attachment.content_type)
                 images.append(image)
+
+
             if attachment.content_type == "application/pdf":
-                # for attachment in message.attachments:
-                #     response = await self.http_client.get(attachment.url)
-                #     response.raise_for_status()
-                #     pdf_document = fitz.open(stream=response.content, filetype="pdf")
-                #     for page in pdf_document:
-                #         pixmap = page.get_pixmap()
-                #         img = Image.frombytes("RGB", [pixmap.width, pixmap.height], pixmap.samples)
-                #         img_buffer = BytesIO()
-                #         img.save(img_buffer, format="PNG")
-                #         b64_encoded = base64.b64encode(img_buffer.getvalue()).decode('utf-8')
-                #         images.append({'mime_type': 'image/png', 'data': b64_encoded})
-                raise Exception("Leitor de pdf desativado por enquanto.")
+                """LER PDF AQUI"""
+                pdf_content = await self.http_client.get(attachment.url)
+                pdf_content.raise_for_status()
+                pdf_part = types.Part.from_bytes(
+                    data=pdf_content.content,
+                    mime_type=attachment.content_type
+                )
+                pdfs.append(pdf_part)
+
+
             elif attachment.content_type.startswith("text/plain"):
                 response = await self.http_client.get(attachment.url)
                 response.raise_for_status()
@@ -103,7 +108,7 @@ class Chat(commands.Cog):
                 except UnicodeDecodeError:
                     text_file_content = "Erro: Não foi possível decodificar o conteúdo do arquivo .txt."
 
-        return images, text_file_content
+        return images, text_file_content, pdfs
 
     async def process_queue(self, channel_id: str):
         while not self.message_queue[channel_id].empty():
@@ -145,11 +150,9 @@ class Chat(commands.Cog):
                 async with message.channel.typing():
                     images = []
                     text_file_content = None
+                    pdfs = []
                     if message.attachments:
-                        images, text_file_content = await self.process_attachments(message.attachments)
-
-                    if images:
-                        prompt = [prompt] + images
+                        images, text_file_content, pdfs = await self.process_attachments(message.attachments)
                     if text_file_content:
                         prompt += (
                             f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do "
@@ -157,6 +160,11 @@ class Chat(commands.Cog):
                             f"o conteúdo do arquivo de forma natural, engraçada e irônica.\n\n"
                             f"Conteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
                         )
+                    if pdfs:
+                        prompt = [prompt] + pdfs
+                    if images:
+                        prompt = [prompt] + images
+                    
 
                     # fodase o stream
 
@@ -238,6 +246,7 @@ class Chat(commands.Cog):
                 self.processing[channel_id] = False
                 if not self.message_queue[channel_id].empty():
                     await self.process_queue(channel_id)
+
 
 
 async def setup(bot):
