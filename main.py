@@ -91,8 +91,8 @@ async def on_ready():
     )
 
 @bot.event
-async def on_message(message):
-    logger.info(f"Mensagem recebida de {message.author} (ID: {message.author.id}) em #{message.channel.name}: {message.content}")
+async def on_message(message: discord.Message):
+    logger.info(f"Mensagem recebida de {message.author} (ID: {message.author.id}) em #{message.channel.name if not isinstance(message.channel, discord.DMChannel) else "Mensagem na DM De:" + message.author.name}: {message.content}")
     await bot.process_commands(message)
 
 @bot.event
