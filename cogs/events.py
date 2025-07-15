@@ -82,14 +82,14 @@ class Chat(commands.Cog):
         pdfs = []
 
         for attachment in attachments:
-            if attachment.content_type.startswith("image/"):
+            if attachment.content_type and attachment.content_type.startswith("image/"):
                 response = await self.http_client.get(attachment.url)
                 response.raise_for_status()
                 image = types.Part.from_bytes(data=response.content, mime_type=attachment.content_type)
                 images.append(image)
 
 
-            if attachment.content_type == "application/pdf":
+            if attachment.content_type and attachment.content_type == "application/pdf":
                 """LER PDF AQUI"""
                 pdf_content = await self.http_client.get(attachment.url)
                 pdf_content.raise_for_status()
@@ -100,7 +100,7 @@ class Chat(commands.Cog):
                 pdfs.append(pdf_part)
 
 
-            elif attachment.content_type.startswith("text/plain"):
+            elif attachment.content_type and attachment.content_type.startswith("text/plain"):
                 response = await self.http_client.get(attachment.url)
                 response.raise_for_status()
                 try:
