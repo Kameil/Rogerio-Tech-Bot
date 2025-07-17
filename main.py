@@ -44,10 +44,17 @@ GENERATION_CONFIG = types.GenerateContentConfig(
     system_instruction=SYSTEM_INSTRUCTION
 )
 
+intents = discord.Intents.none()
+intents.messages = True
+intents.message_content = True
+intents.guilds = True
+
+
+
 bot = commands.Bot(
     command_prefix='r!',
     help_command=None,
-    intents=discord.Intents.all()
+    intents=intents
 )
 bot.chats = {}
 bot.model = MODEL_NAME
