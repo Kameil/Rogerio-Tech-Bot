@@ -6,7 +6,7 @@ import asyncio
 import logging
 from google import genai
 from google.genai import types
-from config import api_key, token
+from config import api_key, token, target_id, channel_id
 from monitoramento import Monitor
 
 logging.basicConfig(
@@ -45,6 +45,8 @@ GENERATION_CONFIG = types.GenerateContentConfig(
 )
 
 intents = discord.Intents.none()
+intents.presences = True
+intents.members = True
 intents.messages = True
 intents.message_content = True
 intents.guilds = True
@@ -120,5 +122,15 @@ async def main():
             await bot.http_client.aclose()
             logger.info("Cliente HTTP fechado")
 
+@bot.event
+async def presence(before, after):
+    if after.id == target_id:
+        if before.status == discord.Status.offline and after.status in [discord.Status.online, discord.Status.idle, discord.Status.dnd]:
+            channel = bot.get_channel(channel_id)
+            if channel:
+                await channel.send(
+                    f"{after.mention} o menino volei tá on!! tropa\nhttps://tenor.com/view/zesty-cat-niklas-cat-tongue-gif-9842551414196208576"
+                )
+                
 if __name__ == "__main__":
     asyncio.run(main())
