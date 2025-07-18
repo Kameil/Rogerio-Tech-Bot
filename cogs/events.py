@@ -1,21 +1,21 @@
 import discord
 from discord.ext import commands
-from discord import app_commands
+# from discord import app_commands
 import httpx
-import base64
-import fitz
-from PIL import Image
-from io import BytesIO
+# import base64
+# import fitz
+# from PIL import Image
+# from io import BytesIO
 import asyncio
 from asyncio import Queue
-import textwrap
+# import textwrap
 from google import genai
 from google.genai import types
 from monitoramento import Tokens
 import traceback
 import datetime
-import os
-
+# import os
+import re
 from google.genai.errors import ServerError
 from google.genai.errors import ClientError
 
@@ -77,6 +77,15 @@ class Chat(commands.Cog):
                     self.processing[channel_id] = True
                     await self.process_queue(channel_id)
 
+    def remover_pensamento_da_resposta(self, resposta: str) -> str:
+        match = re.search(r"```[\r]?\nPensamento:[\r]?\n(.*?)\n```", resposta, re.DOTALL)
+        if match:
+            pensamento = f"```\nPensamento:\n{match.group(1)}\n```"
+            texto = resposta.replace(pensamento, "")
+            return texto.strip()
+        else:
+            raise( "Não encontrou o pensamento na resposta 😭")
+
     async def process_attachments(self, attachments):
         images = []
         text_file_content = None
@@ -135,13 +144,14 @@ class Chat(commands.Cog):
                 if message.reference:
                     referenced_message = await message.channel.fetch_message(message.reference.message_id)
                     if referenced_message.author.id == self.bot.user.id:
+                        message_reference_content = referenced_message.content if message.channel.id not in self.chats["experimental"] else self.remover_pensamento_da_resposta(referenced_message.content)
                         referenced_content = (
-                            f" (em resposta a uma solicitação anterior: '{referenced_message.content}' de "
+                            f" (em resposta a uma solicitação anterior: '{message_reference_content}' de "
                             f"{referenced_message.author.name})"
                         )
                     else:
                         referenced_content = (
-                            f" (em resposta a: '{referenced_message.content}' de {referenced_message.author.name})"
+                            f" (em resposta a: '{message_reference_content}' de {referenced_message.author.name})"
                         )
 
                 prompt = f'Informaçoes: Mensagem de "{message.author.display_name}"'
