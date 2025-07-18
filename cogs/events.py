@@ -84,7 +84,7 @@ class Chat(commands.Cog):
             texto = resposta.replace(pensamento, "")
             return texto.strip()
         else:
-            raise( "Não encontrou o pensamento na resposta 😭")
+            return resposta
 
     async def process_attachments(self, attachments):
         images = []
