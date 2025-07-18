@@ -54,6 +54,7 @@ intents.guilds = True
 member_cache_flags = discord.MemberCacheFlags.none()
 member_cache_flags.joined = True
 
+
 bot = commands.Bot(
     command_prefix='r!',
     help_command=None,
@@ -68,6 +69,9 @@ bot.http_client = httpx.AsyncClient()
 bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
+
+from tools.extract_url_text import get_url_text
+
 bot.experimental_generation_config = types.GenerateContentConfig(
             thinking_config=types.ThinkingConfig(
                 thinking_budget=2000,
@@ -77,6 +81,9 @@ bot.experimental_generation_config = types.GenerateContentConfig(
             max_output_tokens=3000,
             response_mime_type="text/plain",
             system_instruction=bot.system_instruction,
+            tools=[
+                get_url_text
+            ]
             
         )
 

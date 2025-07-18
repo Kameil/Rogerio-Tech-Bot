@@ -214,6 +214,9 @@ class Chat(commands.Cog):
                     return messages
                 
                 _response_text = _response.text
+
+
+
                 # Pensamento experimental ai
                 response_thought_text = ""
                 response_text = ""
@@ -226,8 +229,13 @@ class Chat(commands.Cog):
                             response_thought_text = part.text
                         else:
                             response_text = part.text
-                        _response_text = f"```\nPensamento:\n{response_thought_text}\n```\n{response_text}"
+                        _response_text = f"```\nPensamento:\n{response_thought_text}\n```\n{response_text}" if response_thought_text != "" else response_text
+                        
+
+
                 mensagens_divididas = split_message(_response_text)
+
+
 
                 for mensagem_dividida in mensagens_divididas:
                     await message.reply(mensagem_dividida, mention_author=False)
