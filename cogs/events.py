@@ -24,6 +24,7 @@ class Chat(commands.Cog):
         self.bot: commands.Bot = bot
         self.model: str = bot.model
         self.generation_config: types.GenerateContentConfig = bot.generation_config
+        self.experimental_generation_config = bot.experimental_generation_config
         self.chats: dict = bot.chats
         self.http_client: httpx.AsyncClient = bot.http_client
         self.processing = {}
@@ -121,9 +122,10 @@ class Chat(commands.Cog):
                 if channel_id not in self.chats:
                     # creando chat ai
                     self.chats[channel_id] = self.client.aio.chats.create(
-                        model=self.model,
-                        config=self.generation_config,
+                        model=self.model if message.channel.id not in self.chats["experimental"] else "gemini-2.5-flash-lite-preview-06-17",
+                        config=self.generation_config if message.channel.id not in self.chats["experimental"] else self.experimental_generation_config,
                     )
+                print(self.chats["experimental"])
                 chat = self.chats[channel_id]
 
                 atividades = [atividade.name for atividade in message.author.activities] if not isinstance(
@@ -172,10 +174,11 @@ class Chat(commands.Cog):
                     _response: types.GenerateContentResponse = await chat.send_message(message=prompt)
                     usage_metadata = _response.usage_metadata
                     
-                    self.tokens_monitor.insert_usage(
-                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
-                        guild_id=message.guild.id if message.guild else "dm",
-                    ) # adicionando no banco de dados ne 
+                    if not message.channel.id in self.chats["experimental"]:
+                        self.tokens_monitor.insert_usage(
+                            uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
+                            guild_id=message.guild.id if message.guild else "dm",
+                        ) # adicionando no banco de dados ne 
 
                 # dividir tb
                 def split_message(text, max_length=1900):
@@ -199,8 +202,22 @@ class Chat(commands.Cog):
                         messages.append(current_message.rstrip('\n'))
 
                     return messages
-
-                mensagens_divididas = split_message(_response.text)
+                
+                _response_text = _response.text
+                # Pensamento experimental ai
+                response_thought_text = ""
+                response_text = ""
+                if message.channel.id in self.chats["experimental"]:
+                    print("foi experimental")
+                    for part in _response.candidates[0].content.parts:
+                        if not part.text:
+                            continue
+                        if part.thought:
+                            response_thought_text = part.text
+                        else:
+                            response_text = part.text
+                        _response_text = f"```\nPensamento:\n{response_thought_text}\n```\n{response_text}"
+                mensagens_divididas = split_message(_response_text)
 
                 for mensagem_dividida in mensagens_divididas:
                     await message.reply(mensagem_dividida, mention_author=False)

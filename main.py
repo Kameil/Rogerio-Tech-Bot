@@ -60,13 +60,25 @@ bot = commands.Bot(
     intents=intents,
     member_cache_flags=member_cache_flags,
 )
-bot.chats = {}
+bot.chats = {"experimental": []}
 bot.model = MODEL_NAME
+bot.system_instruction = SYSTEM_INSTRUCTION
 bot.generation_config = GENERATION_CONFIG
 bot.http_client = httpx.AsyncClient()
 bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
+bot.experimental_generation_config = types.GenerateContentConfig(
+            thinking_config=types.ThinkingConfig(
+                thinking_budget=2000,
+                include_thoughts=True
+            ),
+            temperature=0.7,
+            max_output_tokens=3000,
+            response_mime_type="text/plain",
+            system_instruction=bot.system_instruction,
+            
+        )
 
 async def load_cogs():
     try:
