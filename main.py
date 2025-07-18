@@ -37,11 +37,16 @@ Regras:
 - Frase: Responda de forma apropriada ao contexto.
 """
 
+from tools.extract_url_text import get_url_text
+
 MODEL_NAME = "gemini-2.0-flash"
 GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=1000,
     temperature=0.7,
-    system_instruction=SYSTEM_INSTRUCTION
+    system_instruction=SYSTEM_INSTRUCTION,
+    tools=[
+        get_url_text
+    ]
 )
 
 intents = discord.Intents.none()
@@ -70,7 +75,7 @@ bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
 
-from tools.extract_url_text import get_url_text
+
 
 bot.experimental_generation_config = types.GenerateContentConfig(
             thinking_config=types.ThinkingConfig(
