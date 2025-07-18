@@ -6,7 +6,7 @@ import asyncio
 import logging
 from google import genai
 from google.genai import types
-from config import api_key, token, target_id, channel_id
+from config import api_key, token
 from monitoramento import Monitor
 
 logging.basicConfig(
@@ -51,12 +51,14 @@ intents.messages = True
 intents.message_content = True
 intents.guilds = True
 
-
+member_cache_flags = discord.MemberCacheFlags.none()
+member_cache_flags.joined = True
 
 bot = commands.Bot(
     command_prefix='r!',
     help_command=None,
-    intents=intents
+    intents=intents,
+    member_cache_flags=member_cache_flags,
 )
 bot.chats = {}
 bot.model = MODEL_NAME
