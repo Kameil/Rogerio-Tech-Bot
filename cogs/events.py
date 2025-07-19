@@ -186,7 +186,7 @@ class Chat(commands.Cog):
                     
                     if not message.channel.id in self.chats["experimental"]:
                         self.tokens_monitor.insert_usage(
-                            uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
+                            uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count if usage_metadata.candidates_token_count and usage_metadata.prompt_token_count else 0),
                             guild_id=message.guild.id if message.guild else "dm",
                         ) # adicionando no banco de dados ne 
 
