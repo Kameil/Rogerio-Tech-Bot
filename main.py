@@ -36,7 +36,7 @@ Regras:
 - Comando: Siga o comando.
 - Frase: Responda de forma apropriada ao contexto.
 """
-
+from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
 
 MODEL_NAME = "gemini-2.0-flash"
@@ -45,7 +45,7 @@ GENERATION_CONFIG = types.GenerateContentConfig(
     temperature=0.7,
     system_instruction=SYSTEM_INSTRUCTION,
     tools=[
-        get_url_text
+        get_url_text, pesquisar_na_internet
     ]
 )
 
@@ -87,7 +87,7 @@ bot.experimental_generation_config = types.GenerateContentConfig(
             response_mime_type="text/plain",
             system_instruction=bot.system_instruction,
             tools=[
-                get_url_text
+                get_url_text, pesquisar_na_internet
             ]
             
         )

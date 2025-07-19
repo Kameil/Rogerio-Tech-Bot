@@ -5,3 +5,6 @@ pymupdf
 pillow
 google-genai>=1.10.0,<2.0.0
 beautifulsoup4
+duckduckgo-search
+ddgs
+-e git+https://github.com/langchain-ai/langchain-community@main#egg=langchain-community&subdirectory=libs/community
