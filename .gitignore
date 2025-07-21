@@ -5,4 +5,5 @@ rogerio.py
 rogerio
 .vscode
 *.db
+*.log
 cogs/urgente.py

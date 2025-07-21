@@ -11,8 +11,10 @@ from monitoramento import Monitor
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s [%(levelname)s] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S'
+    format='%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
+    datefmt='%Y-%m-%d %H:%M:%S',
+    filename='rogerio.log',
+    filemode='a'
 )
 logger = logging.getLogger(__name__)
 
