@@ -143,8 +143,9 @@ class Chat(commands.Cog):
                 referenced_content = ""
                 if message.reference:
                     referenced_message = await message.channel.fetch_message(message.reference.message_id)
+                    message_reference_content = referenced_message.content if message.channel.id not in self.chats["experimental"] else self.remover_pensamento_da_resposta(referenced_message.content)
                     if referenced_message.author.id == self.bot.user.id:
-                        message_reference_content = referenced_message.content if message.channel.id not in self.chats["experimental"] else self.remover_pensamento_da_resposta(referenced_message.content)
+                       
                         referenced_content = (
                             f" (em resposta a uma solicitação anterior: '{message_reference_content}' de "
                             f"{referenced_message.author.name})"
