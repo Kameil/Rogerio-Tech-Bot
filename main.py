@@ -41,7 +41,7 @@ Regras:
 from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
 
-MODEL_NAME = "gemini-2.0-flash"
+MODEL_NAME = "gemini-2.5-flash"
 GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=1000,
     temperature=0.7,
