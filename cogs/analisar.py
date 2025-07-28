@@ -81,7 +81,7 @@ class Analisar(commands.Cog):
                 # adiciona o uso de tokens no banco de dados 
                 usage_metadata = response.usage_metadata
                 self.tokens_monitor.insert_usage(
-                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
+                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count if usage_metadata.candidates_token_count and usage_metadata.prompt_token_count else 0),
                         guild_id=message.guild.id,
                     )
 
