@@ -9,6 +9,8 @@ from google.genai import types
 from config import api_key, token
 from monitoramento import Monitor
 
+# logging
+# configura o registro de eventos para um arquivo, ajudando a depurar e monitorar a atividade do bot.
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
@@ -18,33 +20,60 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# validação de chaves de api
+# verifica se as chaves essenciais para a api do google e o token do discord estão presentes.
 if not api_key or not token:
     logger.error("\033[31mAPI key ou token não configurados. Verifique o config.py!\033[0m")
     raise ValueError("API key ou token não configurados")
 
+# inicializa o cliente da api generativa do google.
 genai_client = genai.Client(api_key=api_key)
 
-SYSTEM_INSTRUCTION = """ 
-Nome: Rogerio Tech | Tipo: Bot de Discord | Tom: Engraçado e irônico
+# instrucao do sistema (personalidade)
+# define o comportamento e o tom do bot
+SYSTEM_INSTRUCTION = """
+Nome: Rogério Tech | Tipo: Bot de Discord | Tom: Engraçado, irônico e amigável
 
 Formato das mensagens recebidas:
 - "informacoes: mensagem de 'nome do usuario': 'conteudo da mensagem'"
 - "informacoes: mensagem de 'nome do usuario' ativo agora em: 'atividade1', 'atividade2', ..."
 
 Regras:
-- Responda ao conteúdo completo da mensagem de forma natural, engraçada e irônica.
-- Não responda apenas a uma parte da mensagem, a menos que faça sentido.
-- Pergunta: Responda a pergunta completa.
-- Comando: Siga o comando.
-- Frase: Responda de forma apropriada ao contexto.
+- Responda ao conteúdo completo da mensagem de forma natural, com humor e ironia, mantendo um tom leve e respeitoso.
+- Ignore partes irrelevantes da mensagem, focando no contexto principal, se necessário.
+- Pergunta: Responda diretamente, com humor e ironia. Use respostas curtas para perguntas simples e detalhe apenas quando solicitado ou relevante.
+- Comando: Execute o comando com precisão, mantendo o tom engraçado e irônico.
+- Frase ou comentário: Responda de forma criativa, alinhada ao contexto, com uma pitada de sarcasmo ou humor.
+- Seja conciso, evitando respostas longas ou desnecessárias.
+- Adapte o nível de ironia ao conteúdo da mensagem para não soar forçado ou ofensivo.
 """
+
+# importando ferramentass (tools)
+# importa func que o modelo pode usar para interagir com serviços externos, como a internet.
 from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
 
-MODEL_NAME = "gemini-2.5-flash"
+# modelo padrao
+MODEL_NAME = "gemini-1.5-flash"
 GENERATION_CONFIG = types.GenerateContentConfig(
-    max_output_tokens=1000,
+    max_output_tokens=800,  # reduzido para respostas mais concisas 
     temperature=0.7,
+    system_instruction=SYSTEM_INSTRUCTION,
+    tools=[
+        get_url_text, pesquisar_na_internet
+    ]
+)
+
+# modelo experimental
+# config alternativa para o modo experimental, com capacidade de "pensamento".
+EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
+    thinking_config=types.ThinkingConfig(
+        thinking_budget=2000,
+        include_thoughts=True
+    ),
+    temperature=0.7,
+    max_output_tokens=1500,  # reduzido para respostas mais concisas
+    response_mime_type="text/plain",
     system_instruction=SYSTEM_INSTRUCTION,
     tools=[
         get_url_text, pesquisar_na_internet
@@ -58,9 +87,10 @@ intents.messages = True
 intents.message_content = True
 intents.guilds = True
 
+# config de cache dos membros
+# otimiza o cache de membros para usar menos memória
 member_cache_flags = discord.MemberCacheFlags.none()
 member_cache_flags.joined = True
-
 
 bot = commands.Bot(
     command_prefix='r!',
@@ -68,46 +98,32 @@ bot = commands.Bot(
     intents=intents,
     member_cache_flags=member_cache_flags,
 )
-bot.chats = {"experimental": []}
+
+# armazena os objetos e configurações no bot para acesso global pelos cogs
+bot.chats = {"experimental": []}  # dic para gerenciar sessões de chat
 bot.model = MODEL_NAME
 bot.system_instruction = SYSTEM_INSTRUCTION
 bot.generation_config = GENERATION_CONFIG
-bot.http_client = httpx.AsyncClient()
+bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
+bot.http_client = httpx.AsyncClient()  # cliente http para requiscoes assíncronas
 bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
 
-
-
-bot.experimental_generation_config = types.GenerateContentConfig(
-            thinking_config=types.ThinkingConfig(
-                thinking_budget=2000,
-                include_thoughts=True
-            ),
-            temperature=0.7,
-            max_output_tokens=3000,
-            response_mime_type="text/plain",
-            system_instruction=bot.system_instruction,
-            tools=[
-                get_url_text, pesquisar_na_internet
-            ]
-            
-        )
-
 async def load_cogs():
     try:
-        tasks = [bot.load_extension(f"cogs.{file[:-3]}") for file in os.listdir("cogs") if file.endswith(".py")]
-        results = await asyncio.gather(*tasks, return_exceptions=True)
-        for file, result in zip(os.listdir("cogs"), results):
-            if isinstance(result, Exception):
-                logger.error(f"Erro ao carregar cog {file[:-3]}: {result}")
+        cogs_dir = "cogs"
+        for file in os.listdir(cogs_dir):
+            if file.endswith(".py"):
+                await bot.load_extension(f"{cogs_dir}.{file[:-3]}")
+                logger.info(f"Cog '{file[:-3]}' carregado com sucesso.")
     except Exception as e:
-        logger.error(f"Erro ao carregar cogs: {e}")
+        logger.error(f"Erro ao carregar cogs: {e}", exc_info=True)
 
 async def sync_commands():
     try:
         synced = await bot.tree.sync()
-        logger.info(f"Comandos sincronizados: {len(synced)}")
+        logger.info(f"Comandos de barra sincronizados: {len(synced)}")
         return synced
     except discord.errors.HTTPException as e:
         logger.error(f"Erro na sincronização de comandos: {e}")
@@ -118,25 +134,31 @@ async def on_ready():
     await load_cogs()
     synced_commands = await sync_commands()
     logger.info(
-        f"\033[31m=== Rogerio Tech ===\033[0m\n"
-        f"\033[32mBot: {bot.user.name} (ID: {bot.user.id})\033[0m\n"
-        f"Prefixo: {bot.command_prefix}\n"
-        f"Modelo: {bot.model}\n"
-        f"Comandos sincronizados: {len(synced_commands)}\n"
-        f"\033[32mOnline e pronto pra zoar!\033[0m\n"
-        f"\033[31m===========\033[0m"
+    f"Rogerio Tech\n"
+    f"Bot: {bot.user.name} (ID: {bot.user.id})\n"
+    f"Prefix: {bot.command_prefix}\n"
+    f"Model: {bot.model}\n"
+    f"Commands synced: {len(synced_commands)}\n"
+    f"Online and ready!"
     )
 
 @bot.event
 async def on_message(message: discord.Message):
-    logger.info(f"Mensagem recebida de {message.author} (ID: {message.author.id}) em #{message.channel.name if not isinstance(message.channel, discord.DMChannel) else "Mensagem na DM De:" + message.author.name}: {message.content}")
+    # evento executado para cada mensagem recebida
+    # ignora mensagens de outros bots para evitar loops
+    if message.author.bot:
+        return
+    
+    logger.info(f"Mensagem de {message.author} em #{message.channel}: {message.content}")
+    # processa comandos, se houver 
     await bot.process_commands(message)
 
 @bot.event
 async def on_close():
+    # evento executado quando o bot está sendo desligado
     if not bot.http_client.is_closed:
         await bot.http_client.aclose()
-        logger.info("Cliente HTTP fechado")
+        logger.info("Cliente HTTP fechado.")
 
 async def main():
     try:
@@ -144,11 +166,10 @@ async def main():
     except discord.errors.LoginFailure:
         logger.error("\033[31mToken inválido. Confere o config.py!\033[0m")
     except Exception as e:
-        logger.error(f"Erro ao iniciar o bot: {e}")
+        logger.error(f"Erro ao iniciar o bot: {e}", exc_info=True)
     finally:
-        if not bot.http_client.is_closed:
-            await bot.http_client.aclose()
-            logger.info("Cliente HTTP fechado")
-                           
+        if not bot.is_closed():
+            await bot.close()
+
 if __name__ == "__main__":
     asyncio.run(main())

@@ -1,290 +1,193 @@
 import discord
 from discord.ext import commands
-# from discord import app_commands
 import httpx
-# import base64
-# import fitz
-# from PIL import Image
-# from io import BytesIO
 import asyncio
 from asyncio import Queue
-# import textwrap
-from google import genai
-from google.genai import types
-from monitoramento import Tokens
 import traceback
 import datetime
-# import os
 import re
-from google.genai.errors import ServerError
-from google.genai.errors import ClientError
+from google import genai
+from google.genai import types
+from google.genai.errors import ServerError, ClientError
+from monitoramento import Tokens
+import logging
+
+logger = logging.getLogger(__name__)
+
+# view para o botao continuar
+class ContinueView(discord.ui.View):
+    """
+    view do discord que gerencia o botão "continuar" para respostas longas
+    apenas o autor original pode interagir
+    """
+    def __init__(self, author: discord.User, text_parts: list[str]):
+        super().__init__(timeout=300)  # view expira em 5 minutos
+        self.author = author
+        self.text_parts = text_parts
+        self.current_part = 1
+        self.message = None # armazena a mensagem para editar
+
+    async def on_timeout(self):
+        """desativa o botão quando a view expira"""
+        if self.message:
+            self.children[0].disabled = True
+            await self.message.edit(view=self)
+
+    @discord.ui.button(label="➡️ Continuar", style=discord.ButtonStyle.primary)
+    async def continue_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user != self.author:
+            await interaction.response.send_message("Apenas o autor da mensagem original pode fazer isso.", ephemeral=True)
+            return
+
+        await interaction.response.defer() # confirma a interação sem enviar nova msg
+        
+        # edita a mensagem original, adicionando a próxima parte
+        next_part = self.text_parts[self.current_part]
+        await interaction.edit_original_response(content=f"{interaction.message.content}\n\n{next_part}")
+        
+        self.current_part += 1
+        
+        if self.current_part >= len(self.text_parts):
+            # se for a última parte, remove a view (o botão some)
+            await interaction.edit_original_response(view=None)
 
 class Chat(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
-        self.model: str = bot.model
-        self.generation_config: types.GenerateContentConfig = bot.generation_config
-        self.experimental_generation_config = bot.experimental_generation_config
         self.chats: dict = bot.chats
         self.http_client: httpx.AsyncClient = bot.http_client
-        self.processing = {}
-        self.message_queue = {}
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
-        self.timeout_users = {"Now": f"{datetime.datetime.now().minute}"} # so provisioriamente esse timeout ai
-
-
-
+        self.processing = {}
+        self.message_queue = {}
+        self.timeout_users = {"Now": f"{datetime.datetime.now().minute}"}
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
+        """listener que captura mensagens e as coloca na fila de processamento"""
+        if message.author.bot or message.flags.ephemeral:
+            return
 
-        # ignora mensagens efêmeras e de bots
-        if not message.flags.ephemeral and not message.author.bot:
-            if message.guild is None:
-                rogerio_permissions = message.channel.permissions_for(self.bot.user)
-            else:
-                rogerio_permissions = message.channel.permissions_for(message.guild.me)
+        if message.guild:
+            perms = message.channel.permissions_for(message.guild.me)
+        else: 
+            perms = message.channel.permissions_for(self.bot.user)
 
+        is_mention = f"<@{self.bot.user.id}>" in message.content or self.bot.user in message.mentions
+        is_dm = isinstance(message.channel, discord.DMChannel)
+
+        if (is_mention or is_dm) and perms.send_messages:
             channel_id = str(message.channel.id)
+            if channel_id not in self.message_queue:
+                self.message_queue[channel_id] = Queue()
+            
+            await self.message_queue[channel_id].put(message)
 
-            if (f"<@{self.bot.user.id}>" in message.content or
-                    isinstance(message.channel, discord.DMChannel) or
-                    self.bot.user in message.mentions) and rogerio_permissions.send_messages:
-                
-
-                 # sitema provisorio de timeout para evitar flood
-                now = datetime.datetime.now()
-                if self.timeout_users.get("Now") != f"{now.minute}":
-                    self.timeout_users = {"Now": f"{now.minute}"}
-                    self.timeout_users[f"{message.author.id}"] = 1
-                else:
-                    if self.timeout_users.get(f"{message.author.id}") is None:
-                        self.timeout_users[f"{message.author.id}"] = 1
-                    else:
-                        self.timeout_users[f"{message.author.id}"] += 1
-                
-                if self.timeout_users[f"{message.author.id}"] >= 10:
-                    return await message.add_reaction("⏳")
-                
-                # segmento normal
-                if self.message_queue.get(channel_id) is None:
-                    self.message_queue[channel_id] = Queue()
-
-                await self.message_queue[channel_id].put(message)
-
-                if not self.processing.get(channel_id, False):
-                    self.processing[channel_id] = True
-                    await self.process_queue(channel_id)
+            if not self.processing.get(channel_id, False):
+                self.processing[channel_id] = True
+                asyncio.create_task(self.process_queue(channel_id))
 
     def remover_pensamento_da_resposta(self, resposta: str) -> str:
-        match = re.search(r"```[\r]?\nPensamento:[\r]?\n(.*?)\n```", resposta, re.DOTALL)
-        if match:
-            pensamento = f"```\nPensamento:\n{match.group(1)}\n```"
-            texto = resposta.replace(pensamento, "")
-            return texto.strip()
-        else:
-            return resposta
+        """remove o bloco de 'Pensamento' da resposta do modelo experimental"""
+        return re.sub(r"```[\r]?\nPensamento:[\r]?\n.*?\n```", "", resposta, flags=re.DOTALL).strip()
 
-    async def process_attachments(self, attachments):
-        images = []
-        text_file_content = None
-        pdfs = []
+    def split_message(self, text: str, max_length: int = 1900) -> list[str]:
+        """divide um texto longo em partes menores que o limite do Discord"""
+        if len(text) <= max_length:
+            return [text]
 
-        for attachment in attachments:
-            if attachment.content_type and attachment.content_type.startswith("image/"):
-                response = await self.http_client.get(attachment.url)
-                response.raise_for_status()
-                image = types.Part.from_bytes(data=response.content, mime_type=attachment.content_type)
-                images.append(image)
-
-
-            if attachment.content_type and attachment.content_type == "application/pdf":
-                """LER PDF AQUI"""
-                pdf_content = await self.http_client.get(attachment.url)
-                pdf_content.raise_for_status()
-                pdf_part = types.Part.from_bytes(
-                    data=pdf_content.content,
-                    mime_type=attachment.content_type
-                )
-                pdfs.append(pdf_part)
-
-
-            elif attachment.content_type and attachment.content_type.startswith("text/plain"):
-                response = await self.http_client.get(attachment.url)
-                response.raise_for_status()
-                try:
-                    text_file_content = response.content.decode('utf-8')
-                except UnicodeDecodeError:
-                    text_file_content = "Erro: Não foi possível decodificar o conteúdo do arquivo .txt."
-
-        return images, text_file_content, pdfs
+        parts = []
+        while len(text) > 0:
+            if len(text) <= max_length:
+                parts.append(text)
+                break
+            split_at = text.rfind('\n', 0, max_length)
+            if split_at == -1: split_at = text.rfind(' ', 0, max_length)
+            if split_at == -1: split_at = max_length
+            parts.append(text[:split_at])
+            text = text[split_at:].lstrip()
+        return parts
 
     async def process_queue(self, channel_id: str):
         while not self.message_queue[channel_id].empty():
             message: discord.Message = await self.message_queue[channel_id].get()
-            channel_id = str(message.channel.id)
-
             try:
-                self.processing[channel_id] = True
-
-                if channel_id not in self.chats:
-                    # creando chat ai
-                    self.chats[channel_id] = self.client.aio.chats.create(
-                        model=self.model if message.channel.id not in self.chats["experimental"] else "gemini-2.5-flash-lite-preview-06-17",
-                        config=self.generation_config if message.channel.id not in self.chats["experimental"] else self.experimental_generation_config,
-                    )
-                print(self.chats["experimental"])
-                chat = self.chats[channel_id]
-
-                atividades = [atividade.name for atividade in message.author.activities] if not isinstance(
-                    message.channel, discord.DMChannel) and message.author.activities else []
-
-                referenced_content = ""
-                if message.reference:
-                    referenced_message = await message.channel.fetch_message(message.reference.message_id)
-                    message_reference_content = referenced_message.content if message.channel.id not in self.chats["experimental"] else self.remover_pensamento_da_resposta(referenced_message.content)
-                    if referenced_message.author.id == self.bot.user.id:
-                       
-                        referenced_content = (
-                            f" (em resposta a uma solicitação anterior: '{message_reference_content}' de "
-                            f"{referenced_message.author.name})"
-                        )
-                    else:
-                        referenced_content = (
-                            f" (em resposta a: '{message_reference_content}' de {referenced_message.author.name})"
-                        )
-
-                prompt = f'Informaçoes: Mensagem de "{message.author.display_name}"'
-                if atividades:
-                    prompt += f", ativo agora em: discord(aqui), {', '.join(atividades)}"
-                prompt += f": {message.content.replace(f'<@{self.bot.user.id}>', 'Rogerio Tech')}{referenced_content}"
-
-                async with message.channel.typing():
-                    images = []
-                    text_file_content = None
-                    pdfs = []
-                    if message.attachments:
-                        images, text_file_content, pdfs = await self.process_attachments(message.attachments)
-                    if text_file_content:
-                        prompt += (
-                            f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda à mensagem do "
-                            f"usuário com base nesse conteúdo. Se o usuário não fornecer uma instrução clara, descreva "
-                            f"o conteúdo do arquivo de forma natural, engraçada e irônica.\n\n"
-                            f"Conteúdo do arquivo .txt anexado:\n```text\n{text_file_content}\n```"
-                        )
-                    if pdfs:
-                        prompt = [prompt] + pdfs
-                    if images:
-                        prompt = [prompt] + images
-                    
-
-                    # fodase o stream
-
-                    
-                    _response: types.GenerateContentResponse = await chat.send_message(message=prompt)
-                    usage_metadata = _response.usage_metadata
-                    
-                    if not message.channel.id in self.chats["experimental"]:
-                        self.tokens_monitor.insert_usage(
-                            uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count if usage_metadata.candidates_token_count and usage_metadata.prompt_token_count else 0),
-                            guild_id=message.guild.id if message.guild else "dm",
-                        ) # adicionando no banco de dados ne 
-
-                # dividir tb
-                def split_message(text, max_length=1900):
-                    lines = text.split('\n')  # dividir p quebrar a linha
-                    messages = []
-                    current_message = ""
-
-                    for line in lines:
-                        # verifica se passou o limite
-                        if len(current_message) + len(line) + 1 <= max_length:
-                            current_message += line + '\n'
-                        else:
-                            # se a msg n tiver vazia adiciona a lista
-                            if current_message:
-                                messages.append(current_message.rstrip('\n'))
-                            # inicia a conversa na linha atual
-                            current_message = line + '\n'
-
-                    # add a ultima mensagem, se tiver
-                    if current_message:
-                        messages.append(current_message.rstrip('\n'))
-
-                    return messages
-                
-                _response_text = _response.text
-
-
-
-                # Pensamento experimental ai
-                response_thought_text = ""
-                response_text = ""
-                if message.channel.id in self.chats["experimental"]:
-                    print("foi experimental")
-                    for part in _response.candidates[0].content.parts:
-                        if not part.text:
-                            continue
-                        if part.thought:
-                            response_thought_text = part.text
-                        else:
-                            response_text = part.text
-                        _response_text = f"```\nPensamento:\n{response_thought_text}\n```\n{response_text}" if response_thought_text != "" else response_text
-                        
-
-
-                mensagens_divididas = split_message(_response_text)
-
-
-
-                for mensagem_dividida in mensagens_divididas:
-                    await message.reply(mensagem_dividida, mention_author=False)
-
-            except discord.HTTPException as e:
-                if e.status == 429:
-                    await asyncio.sleep(2)
-                    embed = discord.Embed(
-                        title="Rate Limit Excedido",
-                        description="Aguarde um momento, estou enviando muitas mensagens rápido demais!",
-                        color=discord.Color.yellow()
-                    )
+                await self.handle_message(message)
+            except Exception as e:
+                logger.error(f"Erro crítico ao processar mensagem {message.id}: {e}", exc_info=True)
+                embed = discord.Embed(title="Ocorreu Um Erro!", description=f"```py\n{e}\n```", color=discord.Color.red())
+                try:
                     await message.channel.send(embed=embed)
-                else:
-                    traceback.print_exc()
-            except ClientError as e:
-                if e.status == 429:
-                    await message.add_reaction("⏳")
-                    # reagir se exceder o limite de requisições
-            except ServerError:
-                embed = discord.Embed(
-                    title="Erro do Servidor",
-                    description="Ocorreu um erro de Comunicação com o servidor.",
-                    color=discord.Color.red()
-                )
-                await message.channel.send(embed=embed)
-            except Exception:
-                    e = traceback.format_exc()
-                    embed = discord.Embed(
-                        title="Ocorreu Um Erro!",
-                        description=f"\n```py\n{e[:4000]}\n```",
-                        color=discord.Color.red()
-                    )
-                    embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
-                    try:
-                        await message.channel.send(embed=embed)
-                    except Exception as send_erro:
-                        print("Erro ao tentar enviar mensagem de erro:")
-                        traceback.print_exc()
-
+                except discord.HTTPException:
+                    pass # evita loop de erro se não conseguir enviar msg de erro
             finally:
                 self.message_queue[channel_id].task_done()
-                self.processing[channel_id] = False
-                if not self.message_queue[channel_id].empty():
-                    await self.process_queue(channel_id)
+        
+        self.processing[channel_id] = False
 
+    async def handle_message(self, message: discord.Message):
+        """logica central de processamento de uma única mensagem"""
+        channel_id = str(message.channel.id)
 
+        # logica centralizada
+        # verifica se o canal está no modo experimental
+        is_experimental = channel_id in self.chats["experimental"]
+
+        # define o modelo e a configuração com base no modo
+        model_name = "gemini-1.5-pro" if is_experimental else self.bot.model
+        gen_config = self.bot.experimental_generation_config if is_experimental else self.bot.generation_config
+
+        async with message.channel.typing():
+            # cria sessão de chat com as configurações corretas, se não existir
+            if channel_id not in self.chats:
+                logger.info(f"Criando nova sessão de chat para o canal {channel_id} (Experimental: {is_experimental})")
+                self.chats[channel_id] = self.client.aio.chats.create(model=model_name, config=gen_config)
+            chat = self.chats[channel_id]
+
+            # constroi o prompt
+            referenced_content = ""
+            if message.reference and message.reference.message_id:
+                ref_msg = await message.channel.fetch_message(message.reference.message_id)
+                # remove o "pensamento" da mensagem referenciada se ela foi gerada no modo experimental
+                ref_text = self.remover_pensamento_da_resposta(ref_msg.content) if str(ref_msg.channel.id) in self.chats["experimental"] else ref_msg.content
+                ref_author = "minha" if ref_msg.author.id == self.bot.user.id else f"de '{ref_msg.author.name}'"
+                referenced_content = f" (em resposta a uma mensagem {ref_author} que dizia: '{ref_text[:100]}...')"
+            
+            prompt_text = f'Mensagem de "{message.author.display_name}": {message.content.replace(f"<@{self.bot.user.id}>", "Rogerio Tech")}{referenced_content}'
+            prompt_parts = [prompt_text] # TODO: Adicionar processamento de anexo aqui se necessário
+
+            try:
+                response: types.GenerateContentResponse = await chat.send_message(message=prompt_parts)
+                
+                # extrai o texto da resposta corretamente, dependendo do modo
+                response_text = ""
+                if is_experimental:
+                    # no modo experimental, a resposta pode ter um bloco de "pensamento"
+                    # o .text já combina as partes, mas podemos reconstruir se for preciso
+                    for part in response.candidates[0].content.parts:
+                        response_text += part.text
+                else:
+                    response_text = response.text
+
+                # monitora o uso de tokens (apenas no modo padrão, para economizar)
+                if not is_experimental and response.usage_metadata:
+                    self.tokens_monitor.insert_usage(
+                        uso=(response.usage_metadata.prompt_token_count + response.usage_metadata.candidates_token_count),
+                        guild_id=message.guild.id if message.guild else "dm",
+                    )
+            except (ClientError, ServerError) as e:
+                await message.reply(f"Desculpe, a API do Google retornou um erro: {e}", mention_author=False)
+                return
+
+        # envia a resposta, dividindo se for longa
+        mensagens_divididas = self.split_message(response_text)
+        
+        reply_message = await message.reply(mensagens_divididas[0], mention_author=False)
+
+        if len(mensagens_divididas) > 1:
+            view = ContinueView(author=message.author, text_parts=mensagens_divididas)
+            view.message = reply_message
+            await reply_message.edit(view=view)
 
 async def setup(bot):
-    # adiciona o cog ao bot
     await bot.add_cog(Chat(bot))
