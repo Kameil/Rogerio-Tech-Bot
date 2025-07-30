@@ -1,15 +1,21 @@
+import asyncio
+
 from discord.ext import commands
 from discord import app_commands
 import discord
 import httpx
-import base64
 import datetime
 import textwrap
 from google import genai
 from google.genai import types
+
 from monitoramento import Tokens
 from typing import List, Optional
 import traceback
+import re
+import logging
+
+from tools.pastebin import pastebin_send_text as _pastebin_send
 
 class Analisar(commands.Cog):
     def __init__(self, bot):
@@ -19,17 +25,22 @@ class Analisar(commands.Cog):
         self.http_client: httpx.AsyncClient = bot.http_client
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
+        self._mention_re = re.compile(r"<@(\d+)>")
+        self.logger = logging.getLogger(__name__)
 
-    def _remover_mencao(self, content: str, guild: discord.Guild) -> str:
-        for member in guild.members:
-            mention = f"<@!{member.id}>"
-            if mention in content:
-                content = content.replace(mention, f"@{member.name}")
-            mention = f"<@{member.id}>"
-            if mention in content:
-                content = content.replace(mention, f"@{member.name}")
-        return content
+    @app_commands.command(name="analisar", description="Descobrir se é desenrolado.")
+    @app_commands.describe(
+        user="Usuário a ser analisado",
+        mpc="Mensagens por canal. Padrão: 100",
+        prompt="Analise + prompt | nome do usuário + mensagens do usuário"
+    )
+    async def analisar(self, inter: discord.Interaction, user: discord.User, prompt: str = None, mpc: int = 100):
+        # executa a análise inicial
+        await self.executar_analise(inter, user, prompt, mpc)
 
+    # analisar
+    def _remover_mencao(self, message: str) -> str:
+        return self._mention_re.sub("<@\1!>", message)
 
     async def _pegar_mensagens(self, inter: discord.Interaction, user: discord.User, mpc: int) -> List[str]:
         messages = []
@@ -47,7 +58,7 @@ class Analisar(commands.Cog):
                 if message.author == user:
                     horario_utc = message.created_at
                     horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
-                    sanitized_content = self._remover_mencao(message.content, inter.guild)
+                    sanitized_content = self._remover_mencao(message.content)
                     messages.append(
                         f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às '
                         f'{horario_local.strftime("%H:%M:%S %d/%m/%Y")}'
@@ -69,7 +80,7 @@ class Analisar(commands.Cog):
         avatar = response.content if response.status_code == 200 else None
         return avatar
 
-    def _organizar_mensagem(self, textos: List[str]):
+    def _organizar_mensagem(self, textos: List[str]) -> List[str]:
         return [self._remover_mencao(texto) for texto in textos]
 
     def _contar_os_tokens(self, response: types.GenerateContentResponse, inter: discord.Interaction):
@@ -79,6 +90,25 @@ class Analisar(commands.Cog):
 
         guild_id = inter.guild.id,
         )
+
+    async def _send_error(
+            self,
+            inter: discord.Interaction,
+            description: str,
+            title: str = "Ocorreu um erro!",
+            color: int | discord.Color | None = discord.Color.red()
+    ):
+        embed = discord.Embed(
+            title=title,
+            description=description,
+            color=color
+        )
+        embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
+        try:
+            await inter.followup.send(embed=embed, ephemeral=False)
+        except:
+            self.logger.exception("ERROR no comando analisar")
+
 
     async def executar_analise(self, inter: discord.Interaction, user: discord.User, prompt=None, mpc=100, janalisado=False):
         # verifica se a interação ainda é válida antes de deferir
@@ -108,7 +138,7 @@ class Analisar(commands.Cog):
 
                 # divide a resposta em partes menores para respeitar o limite do Discord
                 textos = textwrap.wrap(response.text, 1900, break_long_words=False)
-                textos_sanatizados = self._organizar_mensagem(textos)
+                textos_sanatizados: list[str] = self._organizar_mensagem(textos)
                 for sanitized_text in textos_sanatizados:
                     await inter.followup.send(
                         sanitized_text,
@@ -118,6 +148,13 @@ class Analisar(commands.Cog):
             else:
                 # envia mensagem de erro se a imagem não pôde ser obtida
                 await inter.followup.send("Não foi possível obter a imagem do perfil do usuário.")
+        except discord.HTTPException as e:
+            try:
+                pastebin = _pastebin_send(texto="\n".join(textos_sanatizados))
+            except:
+                pastebin = "{pastebin_url}"
+            await asyncio.sleep(10)
+            await self._send_error(inter, title=f"HTTP {e.status}", description=f"A analise ficou guardada no {pastebin}")
         except Exception as e:
             # envia um embed com detalhes do erro, caso ocorra
             error_text = traceback.format_exc()
@@ -181,13 +218,18 @@ class Analisar(commands.Cog):
 
         @discord.ui.button(label="Re:Analisar", style=discord.ButtonStyle.secondary)
         async def analisar(self, interaction: discord.Interaction, button: discord.ui.Button):
+            # button nao ta sendo usado ai
             # verifica se o usuário clicando é o autor do comando
             if interaction.user.id != self.author:
                 return await interaction.response.send_message(
                     "Apenas o usuário que executou o comando pode usar esse botão.",
                     ephemeral=True
                 )
-            if not self.janalisado:
+            if self.janalisado:
+                # informa que o usuário já foi analisado
+                await interaction.response.send_message("Usuário já analisado.", ephemeral=True)
+                return None
+            else:
                 self.janalisado = True
                 # cria um menu de seleção para escolher entre novo prompt ou original
                 select = discord.ui.Select(
@@ -214,16 +256,21 @@ class Analisar(commands.Cog):
                             await self.bot.get_cog("Analisar").executar_analise(
                                 interaction_select, self.user, self.prompt, self.mpc, janalisado=True
                             )
-                    except Exception as e:
-                        # garante que a mensagem de erro seja clara e bem formatada
-                        error_message = f"Erro ao processar a seleção: {str(e)}\nTipo do erro: {type(e).__name__}"
-                        embed = discord.Embed(
-                            title="Ocorreu Um Erro!",
-                            description=error_message,
-                            color=discord.Color.red()
+                    except discord.HTTPException as e:
+                        if e.status == 429:
+                            await Analisar._send_error(
+                                title="Erro HTTP",
+                                description="Too many request, vá mais devagar."
+                            )
+
+                    except Exception:
+                        error = traceback.format_exc()
+                        error_msg = f"```\n{error[len(error) - 1900]}\n```" if len(error) >= 2000 else f"```\n{error}\n```"
+                        await Analisar._send_error(
+                            inter=interaction,
+                            description=error_msg
                         )
-                        embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
-                        await interaction_select.followup.send(embed=embed, ephemeral=False)
+
 
                 select.callback = select_callback
                 view = discord.ui.View()
@@ -234,19 +281,7 @@ class Analisar(commands.Cog):
                     view=view,
                     ephemeral=True
                 )
-            else:
-                # informa que o usuário já foi analisado
-                await interaction.response.send_message("Usuário já analisado.", ephemeral=True)
-
-    @app_commands.command(name="analisar", description="Descobrir se é desenrolado.")
-    @app_commands.describe(
-        user="Usuário a ser analisado",
-        mpc="Mensagens por canal. Padrão: 100",
-        prompt="Analise + prompt | nome do usuário + mensagens do usuário"
-    )
-    async def analisar(self, inter: discord.Interaction, user: discord.User, prompt: str = None, mpc: int = 100):
-        # executa a análise inicial
-        await self.executar_analise(inter, user, prompt, mpc)
+                return None
 
 
 async def setup(bot):
