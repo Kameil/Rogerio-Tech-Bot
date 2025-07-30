@@ -54,9 +54,9 @@ from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
 
 # modelo padrao
-MODEL_NAME = "gemini-1.5-flash"
+MODEL_NAME = "gemini-2.5-flash" 
 GENERATION_CONFIG = types.GenerateContentConfig(
-    max_output_tokens=800,  # reduzido para respostas mais concisas 
+    max_output_tokens=800,  # reduzido para respostas mais concisas
     temperature=0.7,
     system_instruction=SYSTEM_INSTRUCTION,
     tools=[
@@ -80,6 +80,8 @@ EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
     ]
 )
 
+# intents do discord
+# definem quais eventos o bot irá receber do discord.
 intents = discord.Intents.none()
 intents.presences = True
 intents.members = True
@@ -88,10 +90,12 @@ intents.message_content = True
 intents.guilds = True
 
 # config de cache dos membros
-# otimiza o cache de membros para usar menos memória
+# otimiza o cache de membros para usar menos memória, armazenando apenas membros que entraram recentemente.
 member_cache_flags = discord.MemberCacheFlags.none()
 member_cache_flags.joined = True
 
+# inicialização do bot
+# cria a instância do bot com as configurações definidas.
 bot = commands.Bot(
     command_prefix='r!',
     help_command=None,
@@ -105,12 +109,14 @@ bot.model = MODEL_NAME
 bot.system_instruction = SYSTEM_INSTRUCTION
 bot.generation_config = GENERATION_CONFIG
 bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
-bot.http_client = httpx.AsyncClient()  # cliente http para requiscoes assíncronas
+bot.http_client = httpx.AsyncClient()  # cliente http para requisicoes assíncronas
 bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
 
 async def load_cogs():
+    # carrega todas as extensões (cogs) da pasta 'cogs'.
+    # isso ajuda a organizar o código em módulos.
     try:
         cogs_dir = "cogs"
         for file in os.listdir(cogs_dir):
@@ -121,6 +127,7 @@ async def load_cogs():
         logger.error(f"Erro ao carregar cogs: {e}", exc_info=True)
 
 async def sync_commands():
+    # sincroniza os comandos de barra (slash commands) com o discord.
     try:
         synced = await bot.tree.sync()
         logger.info(f"Comandos de barra sincronizados: {len(synced)}")
@@ -131,36 +138,33 @@ async def sync_commands():
 
 @bot.event
 async def on_ready():
+    # evento executado quando o bot está online e pronto.
     await load_cogs()
     synced_commands = await sync_commands()
+    # log de status com a formatação original e mais estilizada.
     logger.info(
-    f"Rogerio Tech\n"
-    f"Bot: {bot.user.name} (ID: {bot.user.id})\n"
-    f"Prefix: {bot.command_prefix}\n"
-    f"Model: {bot.model}\n"
-    f"Commands synced: {len(synced_commands)}\n"
-    f"Online and ready!"
+        f"\033[31m=== Rogerio Tech ===\033[0m\n"
+        f"\033[32mBot: {bot.user.name} (ID: {bot.user.id})\033[0m\n"
+        f"Prefixo: {bot.command_prefix}\n"
+        f"Modelo: {bot.model}\n"
+        f"Comandos sincronizados: {len(synced_commands)}\n"
+        f"\033[32mOnline e pronto pra zoar!\033[0m\n"
+        f"\033[31m===========\033[0m"
     )
 
 @bot.event
 async def on_message(message: discord.Message):
-    # evento executado para cada mensagem recebida
-    # ignora mensagens de outros bots para evitar loops
+    # evento executado para cada mensagem recebida.
+    # ignora mensagens de outros bots para evitar loops.
     if message.author.bot:
         return
     
     logger.info(f"Mensagem de {message.author} em #{message.channel}: {message.content}")
-    # processa comandos, se houver 
+    # processa comandos, se houver.
     await bot.process_commands(message)
 
-@bot.event
-async def on_close():
-    # evento executado quando o bot está sendo desligado
-    if not bot.http_client.is_closed:
-        await bot.http_client.aclose()
-        logger.info("Cliente HTTP fechado.")
-
 async def main():
+    # função principal que inicia o bot.
     try:
         await bot.start(token=token)
     except discord.errors.LoginFailure:
@@ -168,8 +172,14 @@ async def main():
     except Exception as e:
         logger.error(f"Erro ao iniciar o bot: {e}", exc_info=True)
     finally:
+        # garante que os recursos sejam liberados ao fechar o bot.
         if not bot.is_closed():
             await bot.close()
+        
+        if not bot.http_client.is_closed:
+            await bot.http_client.aclose()
+            logger.info("Cliente HTTP fechado.")
 
 if __name__ == "__main__":
+    # ponto de entrada do script.
     asyncio.run(main())
