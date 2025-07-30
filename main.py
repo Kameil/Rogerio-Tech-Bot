@@ -47,7 +47,6 @@ Regras:
 - Seja conciso, mas engraçado. Nada de textos longos desnecessário.
 """
 
-
 # importando ferramentass (tools)
 # importa func que o modelo pode usar para interagir com serviços externos, como a internet.
 from tools.internet_search import pesquisar_na_internet
