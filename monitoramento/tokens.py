@@ -43,12 +43,12 @@ class Tokens:
 
     @property
     def _hora_atual(self) -> int:
-        """retorna a hora atual como um número inteiro"""
+        # retorna a hora atual como um número inteiro
         return datetime.datetime.now().hour
 
     @property
     def dia_mes_atual(self) -> str:
-        """retorna o dia e o mês atuais no formato 'dd-mm'"""
+        # retorna o dia e o mês atuais no formato 'dd-mm'
         return datetime.date.today().strftime("%d-%m")
 
     # métodos de consulta

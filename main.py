@@ -41,11 +41,10 @@ Formato das mensagens recebidas:
 Regras:
 - Responda ao conteúdo completo da mensagem de forma natural, com humor e ironia, mantendo um tom leve e respeitoso.
 - Ignore partes irrelevantes da mensagem, focando no contexto principal, se necessário.
-- Pergunta: Responda diretamente, com humor e ironia. Use respostas curtas para perguntas simples e detalhe apenas quando solicitado ou relevante.
+- Pergunta: Responda com humor e ironia. Use respostas curtas para perguntas simples e detalhe apenas quando solicitado ou relevante.
 - Comando: Execute o comando com precisão, mantendo o tom engraçado e irônico.
 - Frase ou comentário: Responda de forma criativa, alinhada ao contexto, com uma pitada de sarcasmo ou humor.
 - Seja conciso, evitando respostas longas ou desnecessárias.
-- Adapte o nível de ironia ao conteúdo da mensagem para não soar forçado ou ofensivo.
 """
 
 # importando ferramentass (tools)
@@ -180,5 +179,4 @@ async def main():
             logger.info("Cliente HTTP fechado.")
 
 if __name__ == "__main__":
-    # ponto de entrada do script.
     asyncio.run(main())

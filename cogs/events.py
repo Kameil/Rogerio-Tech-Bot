@@ -56,7 +56,8 @@ class Chat(commands.Cog):
         self.chats: dict = bot.chats
         self.http_client: httpx.AsyncClient = bot.http_client
         self.client: genai.Client = bot.client
-        self.tokens_monitor = bot.tokens_monitor
+        # acessa o objeto monitor geral, que contém os monitores de tokens e de mensagens
+        self.monitor = bot.monitor
         self.processing = {}  # controla o processamento por canal
         self.message_queue = {}  # filas de mensagens por canal
         self.timeout_users = {"Now": datetime.datetime.now().minute} # sistema de timeout anti-flood
@@ -71,7 +72,7 @@ class Chat(commands.Cog):
         if not perms.send_messages:
             return
 
-        # sistema provisorio de timeout para evitar flood (reimplementado)
+        # sistema provisorio de timeout para evitar flood
         now = datetime.datetime.now()
         if self.timeout_users.get("Now") != now.minute:
             self.timeout_users = {"Now": now.minute, str(message.author.id): 1}
@@ -125,7 +126,6 @@ class Chat(commands.Cog):
                 response.raise_for_status()
                 content_bytes = response.content
                 
-                # trata arquivos de texto de forma especial para adicionar ao prompt
                 if attachment.content_type and attachment.content_type.startswith("text/plain"):
                     try:
                         text_content += content_bytes.decode('utf-8') + "\n"
@@ -159,27 +159,33 @@ class Chat(commands.Cog):
 
     async def handle_message(self, message: discord.Message):
         """lógica central para lidar com uma única mensagem, desde a criação do prompt até o envio da resposta."""
+        
+        # salva a mensagem no banco de dados antes de processar
+        self.monitor.messages.insert_message(message)
+
         channel_id = str(message.channel.id)
         is_experimental = channel_id in self.chats["experimental"]
         
         gen_config = self.bot.experimental_generation_config if is_experimental else self.bot.generation_config
+        # usa o modelo definido no main.py, e um modelo mais avançado para o modo experimental
         model_name = "gemini-1.5-pro-latest" if is_experimental else self.bot.model
 
         async with message.channel.typing():
             if channel_id not in self.chats:
                 logger.info(f"criando nova sessão de chat para o canal {channel_id} (experimental: {is_experimental})")
-                self.chats[channel_id] = self.client.start_chat(model=model_name, generation_config=gen_config)
+                self.chats[channel_id] = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
             chat = self.chats[channel_id]
 
-            # construção do prompt (combinando lógicas)
             referenced_content = ""
             if message.reference and message.reference.message_id:
-                ref_msg = await message.channel.fetch_message(message.reference.message_id)
-                ref_text = self.remover_pensamento_da_resposta(ref_msg.content)
-                ref_author = "minha" if ref_msg.author.id == self.bot.user.id else f"de '{ref_msg.author.name}'"
-                referenced_content = f" (em resposta a uma mensagem {ref_author} que dizia: '{ref_text[:150]}...')"
-            
-            # reimplementado: adiciona as atividades do usuario ao prompt
+                try:
+                    ref_msg = await message.channel.fetch_message(message.reference.message_id)
+                    ref_text = self.remover_pensamento_da_resposta(ref_msg.content)
+                    ref_author = "minha" if ref_msg.author.id == self.bot.user.id else f"de '{ref_msg.author.name}'"
+                    referenced_content = f" (em resposta a uma mensagem {ref_author} que dizia: '{ref_text[:150]}...')"
+                except discord.NotFound:
+                    referenced_content = " (em resposta a uma mensagem apagada)"
+
             activities = [act.name for act in message.author.activities if isinstance(act, discord.Activity)] if message.guild else []
             activity_text = f", ativo agora em: {', '.join(activities)}" if activities else ""
             
@@ -190,7 +196,6 @@ class Chat(commands.Cog):
             if message.attachments:
                 attachment_parts, text_content = await self.process_attachments(message.attachments)
                 prompt_parts.extend(attachment_parts)
-                # reimplementado: adiciona instrução para analisar arquivos de texto
                 if text_content:
                     prompt_parts.append(f"\n\nInstruções: Analise o conteúdo do arquivo .txt anexado e responda com base nele.\nConteúdo do arquivo:\n```\n{text_content}\n```")
 
@@ -199,11 +204,10 @@ class Chat(commands.Cog):
                 response_text = response.text
 
                 if response.usage_metadata:
-                    self.tokens_monitor.insert_usage(
+                    self.monitor.tokens_monitor.insert_usage(
                         uso=(response.usage_metadata.prompt_token_count + response.usage_metadata.candidates_token_count),
                         guild_id=message.guild.id if message.guild else "dm",
                     )
-            # tratamento de erro específico da api (reimplementado)
             except ClientError as e:
                 await message.reply(f"um erro ocorreu com a sua solicitação à API: {e}", mention_author=False)
                 return
