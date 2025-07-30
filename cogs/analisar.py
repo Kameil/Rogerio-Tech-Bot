@@ -8,7 +8,8 @@ import textwrap
 from google import genai
 from google.genai import types
 from monitoramento import Tokens
-
+from typing import List, Optional
+import traceback
 
 class Analisar(commands.Cog):
     def __init__(self, bot):
@@ -19,7 +20,7 @@ class Analisar(commands.Cog):
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
 
-    def mencao(self, content: str, guild: discord.Guild) -> str:
+    def _remover_mencao(self, content: str, guild: discord.Guild) -> str:
         for member in guild.members:
             mention = f"<@!{member.id}>"
             if mention in content:
@@ -29,48 +30,71 @@ class Analisar(commands.Cog):
                 content = content.replace(mention, f"@{member.name}")
         return content
 
-    async def _executar_analise(self, inter: discord.Interaction, user, prompt=None, mpc=100, janalisado=False):
+
+    async def _pegar_mensagens(self, inter: discord.Interaction, user: discord.User, mpc: int) -> List[str]:
+        messages = []
+
+        # itera sobre os canais de texto do servidor
+        for channel in inter.guild.text_channels:
+            bot_permissions = channel.permissions_for(inter.guild.me)
+            user_permissions = channel.permissions_for(inter.user)
+            # ignora canais sem permissão de leitura de histórico para o bot ou sem acesso para o usuário
+            if not bot_permissions.read_message_history or not user_permissions.read_messages:
+                continue
+
+            # coleta até 'mpc' mensagens do canal
+            async for message in channel.history(limit=mpc):
+                if message.author == user:
+                    horario_utc = message.created_at
+                    horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
+                    sanitized_content = self._remover_mencao(message.content, inter.guild)
+                    messages.append(
+                        f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às '
+                        f'{horario_local.strftime("%H:%M:%S %d/%m/%Y")}'
+                    )
+        return messages
+
+    def _criar_o_prompt(self, user: discord.User, prompt: bool | str, messages: list[str]) -> str:
+        prompt_probot = f"Analise esse usuário com base no seu nome e na sua imagem de perfil e diga se ele é desenrolado ou não. Nome: {user.name}\n"
+        if prompt is not None:
+            prompt_probot = f"Analise {prompt} | Nome do usuário: {user.name}, Mensagens do usuário:\n"
+        print(prompt_probot)
+
+        prompt_probot += "\n".join(messages)
+        return prompt_probot
+
+    async def _obter_imagem_do_usuario(self, user: discord.User) -> Optional[bytes]:
+        # obtém a imagem de perfil do usuário
+        response = await self.http_client.get(user.avatar.url)
+        avatar = response.content if response.status_code == 200 else None
+        return avatar
+
+    def _organizar_mensagem(self, textos: List[str]):
+        return [self._remover_mencao(texto) for texto in textos]
+
+    def _contar_os_tokens(self, response: types.GenerateContentResponse, inter: discord.Interaction):
+        usage_metadata = response.usage_metadata
+        self.tokens_monitor.insert_usage(
+        uso=usage_metadata.total_token_count,
+
+        guild_id = inter.guild.id,
+        )
+
+    async def executar_analise(self, inter: discord.Interaction, user: discord.User, prompt=None, mpc=100, janalisado=False):
         # verifica se a interação ainda é válida antes de deferir
         if not inter.response.is_done():
             await inter.response.defer()
-
+        #verifica se o comando foi executado em um canal de texto
         if isinstance(inter.channel, discord.DMChannel):
             return await inter.followup.send("Esse comando só pode ser executado em um servidor.")
 
         try:
-            # lista para armazenar mensagens coletadas
-            messages = []
-
-            # itera sobre os canais de texto do servidor
-            for channel in inter.guild.text_channels:
-                bot_permissions = channel.permissions_for(inter.guild.me)
-                user_permissions = channel.permissions_for(inter.user)
-                # ignora canais sem permissão de leitura de histórico para o bot ou sem acesso para o usuário
-                if not bot_permissions.read_message_history or not user_permissions.read_messages:
-                    continue
-
-                # coleta até 'mpc' mensagens do canal
-                async for message in channel.history(limit=mpc):
-                    if message.author == user:
-                        horario_utc = message.created_at
-                        horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
-                        sanitized_content = self.mencao(message.content, inter.guild)
-                        messages.append(
-                            f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às '
-                            f'{horario_local.strftime("%H:%M:%S %d/%m/%Y")}'
-                        )
-
-            prompt_probot = f"Analise esse usuário com base no seu nome e na sua imagem de perfil e diga se ele é desenrolado ou não. Nome: {user.name}\n"
-            if prompt is not None:
-                prompt_probot = f"Analise {prompt} | Nome do usuário: {user.name}, Mensagens do usuário:\n"
-            print(prompt_probot)
-
-            prompt_probot += "\n".join(messages)
-
-            # obtém a imagem de perfil do usuário
-            response = await self.http_client.get(user.avatar.url)
-            avatar = response.content if response.status_code == 200 else None
-
+            # lista que armazena as mensagens coletadas
+            messages = await self._pegar_mensagens(inter, user, mpc)
+            # criar o prompt
+            prompt_probot = self._criar_o_prompt(user, prompt, messages)
+            # download da imagem do usuario
+            avatar = await self._obter_imagem_do_usuario(user)
             if avatar:
                 # envia o prompt e a imagem para o modelo de IA
                 response = await self.client.aio.models.generate_content(
@@ -78,39 +102,28 @@ class Analisar(commands.Cog):
                     config=self.generation_config,
                     model=self.model
                 )
-                # adiciona o uso de tokens no banco de dados 
-                usage_metadata = response.usage_metadata
-                self.tokens_monitor.insert_usage(
-                        uso=(usage_metadata.prompt_token_count + usage_metadata.candidates_token_count),
-                        guild_id=message.guild.id,
-                    )
+                #contar os tokens
+                self._contar_os_tokens(response, inter)
+
 
                 # divide a resposta em partes menores para respeitar o limite do Discord
-                textos = textwrap.wrap(response.text, 2000)
-                for text in textos:
-                    # sanitiza a resposta do modelo para evitar menções ativas
-                    sanitized_text = self.mencao(text, inter.guild)
-                    if text == textos[-1] and not janalisado:
-                        # envia a última parte com botões, desativando menções
-                        await inter.followup.send(
-                            sanitized_text,
-                            view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id),
-                            allowed_mentions=discord.AllowedMentions.none()
-                        )
-                    else:
-                        # envia as partes anteriores, desativando menções
-                        await inter.followup.send(
-                            sanitized_text,
-                            allowed_mentions=discord.AllowedMentions.none()
-                        )
+                textos = textwrap.wrap(response.text, 1900, break_long_words=False)
+                textos_sanatizados = self._organizar_mensagem(textos)
+                for sanitized_text in textos_sanatizados:
+                    await inter.followup.send(
+                        sanitized_text,
+                        view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id) if sanitized_text == textos_sanatizados[-1] and not janalisado else None,
+                        allowed_mentions=discord.AllowedMentions.none()
+                    )
             else:
                 # envia mensagem de erro se a imagem não pôde ser obtida
                 await inter.followup.send("Não foi possível obter a imagem do perfil do usuário.")
         except Exception as e:
             # envia um embed com detalhes do erro, caso ocorra
+            error_text = traceback.format_exc()
             embed = discord.Embed(
                 title="Ocorreu Um Erro!",
-                description=f"Erro ao analisar usuário: {str(e)}\nTipo do erro: {type(e).__name__}",
+                description=f"Erro ao analisar usuário: \n```py\n{str(error_text)}\n```py\nTipo do erro: {type(e).__name__}",
                 color=discord.Color.red()
             )
             embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
@@ -142,7 +155,7 @@ class Analisar(commands.Cog):
                 # verifica se a interação ainda é válida antes de prosseguir
                 if not interaction.response.is_done():
                     await interaction.response.defer()
-                await self.bot.get_cog("Analisar")._executar_analise(
+                await self.bot.get_cog("Analisar").executar_analise(
                     interaction, self.user, new_prompt, self.mpc, janalisado=True
                 )
             except Exception as e:
@@ -198,7 +211,7 @@ class Analisar(commands.Cog):
                             # faz a análise com o prompt original
                             if not interaction_select.response.is_done():
                                 await interaction_select.response.defer()
-                            await self.bot.get_cog("Analisar")._executar_analise(
+                            await self.bot.get_cog("Analisar").executar_analise(
                                 interaction_select, self.user, self.prompt, self.mpc, janalisado=True
                             )
                     except Exception as e:
@@ -233,7 +246,7 @@ class Analisar(commands.Cog):
     )
     async def analisar(self, inter: discord.Interaction, user: discord.User, prompt: str = None, mpc: int = 100):
         # executa a análise inicial
-        await self._executar_analise(inter, user, prompt, mpc)
+        await self.executar_analise(inter, user, prompt, mpc)
 
 
 async def setup(bot):
