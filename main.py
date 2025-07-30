@@ -143,15 +143,14 @@ async def on_ready():
     synced_commands = await sync_commands()
     # log de status com a formatação original e mais estilizada.
     logger.info(
-        f"\033[31m=== Rogerio Tech ===\033[0m\n"
-        f"\033[32mBot: {bot.user.name} (ID: {bot.user.id})\033[0m\n"
-        f"Prefixo: {bot.command_prefix}\n"
-        f"Modelo: {bot.model}\n"
-        f"Comandos sincronizados: {len(synced_commands)}\n"
-        f"\033[32mOnline e pronto pra zoar!\033[0m\n"
-        f"\033[31m===========\033[0m"
+    f"Rogerio Tech\n"
+    f"Bot: {bot.user.name} (ID: {bot.user.id})\n"
+    f"Prefixo: {bot.command_prefix}\n"
+    f"Modelo: {bot.model}\n"
+    f"Comandos sincronizados: {len(synced_commands)}\n"
+    f"Online e zueiro!\n"
     )
-
+    
 @bot.event
 async def on_message(message: discord.Message):
     # evento executado para cada mensagem recebida.
