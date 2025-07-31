@@ -8,7 +8,7 @@ import datetime
 import textwrap
 
 from google import genai
-from google.genai import types
+from google.genai import types as genai_types
 from google.genai import errors as genai_errors
 
 from monitoramento import Tokens
@@ -24,7 +24,7 @@ class Analisar(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
         self.model: str = bot.model
-        self.generation_config: types.GenerateContentConfig = bot.generation_config # type: ignore
+        self.generation_config: genai_types.GenerateContentConfig = bot.generation_config # type: ignore
         self.http_client: httpx.AsyncClient = bot.http_client
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
@@ -98,7 +98,7 @@ class Analisar(commands.Cog):
             mensagens_coisadas.append(coisado)
         return mensagens_coisadas
 
-    def _contar_os_tokens(self, response: types.GenerateContentResponse, inter: discord.Interaction):
+    def _contar_os_tokens(self, response: genai_types.GenerateContentResponse, inter: discord.Interaction):
         if response.usage_metadata and inter.guild:
             usage_metadata = response.usage_metadata
             if usage_metadata.total_token_count is not None:
@@ -156,7 +156,7 @@ class Analisar(commands.Cog):
                 # envia o prompt e a imagem para o modelo de IA
                 self.logger.info(f"/analisar - {guild_name} - getting model response.")
                 response = await self.client.aio.models.generate_content(
-                    contents=[response_prompt, types.Part.from_bytes(data=avatar, mime_type="image/png")],
+                    contents=[response_prompt, genai_types.Part.from_bytes(data=avatar, mime_type="image/png")],
                     config=self.generation_config,
                     model=self.model
                 )
@@ -215,8 +215,7 @@ class Analisar(commands.Cog):
                 title="ERRO de api",
                 description=e.message,
                 color=discord.Color.red()
-            )
-        
+            )   
         except Exception as e:
             # envia um embed com detalhes do erro, caso ocorra
             error_text = traceback.format_exc()
