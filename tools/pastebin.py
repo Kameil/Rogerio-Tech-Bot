@@ -1,7 +1,7 @@
 from httpx import AsyncClient
 from config import pastebin_api_key
 
-async def pastebin_send_text(texto: str, client=AsyncClient) -> str:
+async def pastebin_send_text(texto: str, client: AsyncClient) -> str:
     "Vamos Economizar Tokens, Enviar os Erros para o Pastebin"
     data = {
         "api_dev_key": pastebin_api_key,
@@ -17,7 +17,7 @@ async def pastebin_send_text(texto: str, client=AsyncClient) -> str:
     response = await client.post(url="https://pastebin.com/api/api_post.php", data=data, timeout=10)
     if response.status_code == 200:
         return response.text
-    raise(response.text, "Ocorreu um ERROR ao enviar a mensagem para o pastebin")
+    raise "Não foi possivel obter o pastebin" # type: ignore
 
 
 
