@@ -10,18 +10,20 @@ from config import api_key, token
 from monitoramento import Monitor
 
 # logging
-# configura o registro de eventos para um arquivo, ajudando a depurar e monitorar a atividade do bot.
+# gambiara fudida pra tirar o logging de afc pq eu nao tava sabendo como, isso silencia TODAS as lib
 logging.basicConfig(
-    level=logging.INFO,
+    level=logging.WARNING, # INFO para WARNING
     format='%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
     filename='rogerio.log',
     filemode='a'
 )
+
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
+
 
 # validação de chaves de api
-# verifica se as chaves essenciais para a api do google e o token do discord estão presentes.
 if not api_key or not token:
     logger.error("\033[31mAPI key ou token não configurados. Verifique o config.py!\033[0m")
     raise ValueError("API key ou token não configurados")
@@ -30,7 +32,6 @@ if not api_key or not token:
 genai_client = genai.Client(api_key=api_key)
 
 # instrucao do sistema (personalidade)
-# define o comportamento e o tom do bot
 SYSTEM_INSTRUCTION = """
 Nome: Rogério Tech(do Youtube) | Tipo: Bot de Discord | Tom: Engraçado, irônico, amigável, com uma pitada de zoeira.
 
@@ -45,17 +46,17 @@ Regras:
 - **Comando**: Execute com precisão sem perder o foco, mas com uma brincadeira no meio.
 - **Frase/Comentário**: Responda de forma criativa, com um toque de sarcasmo ou humor, sempre no clima do contexto.
 - Seja conciso, mas engraçado. Nada de textos longos desnecessário.
+- **IMPORTANTE - Limite de Resposta:** Suas respostas DEVEM ser completas. Para solicitações que exijam respostas longas e detalhadas, a resposta inteira deve ter no máximo 3800 caracteres para caber nos limites do Discord. Resuma o conteúdo de forma inteligente para caber neste limite, mas NUNCA corte uma resposta no meio de uma frase.
 """
 
 # importando ferramentass (tools)
-# importa func que o modelo pode usar para interagir com serviços externos, como a internet.
 from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
 
 # modelo padrao
 MODEL_NAME = "gemini-2.5-flash" 
 GENERATION_CONFIG = types.GenerateContentConfig(
-    max_output_tokens=800,  # reduzido para respostas mais concisas
+    max_output_tokens=1800,
     temperature=0.7,
     system_instruction=SYSTEM_INSTRUCTION,
     tools=[
@@ -64,14 +65,13 @@ GENERATION_CONFIG = types.GenerateContentConfig(
 )
 
 # modelo experimental
-# config alternativa para o modo experimental, com capacidade de "pensamento".
 EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
     thinking_config=types.ThinkingConfig(
         thinking_budget=2000,
         include_thoughts=True
     ),
     temperature=0.7,
-    max_output_tokens=1500,  # reduzido para respostas mais concisas
+    max_output_tokens=1800,
     response_mime_type="text/plain",
     system_instruction=SYSTEM_INSTRUCTION,
     tools=[
@@ -80,7 +80,6 @@ EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
 )
 
 # intents do discord
-# definem quais eventos o bot irá receber do discord.
 intents = discord.Intents.none()
 intents.presences = True
 intents.members = True
@@ -89,12 +88,10 @@ intents.message_content = True
 intents.guilds = True
 
 # config de cache dos membros
-# otimiza o cache de membros para usar menos memória, armazenando apenas membros que entraram recentemente.
 member_cache_flags = discord.MemberCacheFlags.none()
 member_cache_flags.joined = True
 
 # inicialização do bot
-# cria a instância do bot com as configurações definidas.
 bot = commands.Bot(
     command_prefix='r!',
     help_command=None,
@@ -103,19 +100,17 @@ bot = commands.Bot(
 )
 
 # armazena os objetos e configurações no bot para acesso global pelos cogs
-bot.chats = {"experimental": []}  # dic para gerenciar sessões de chat
+bot.chats = {"experimental": []}
 bot.model = MODEL_NAME
 bot.system_instruction = SYSTEM_INSTRUCTION
 bot.generation_config = GENERATION_CONFIG
 bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
-bot.http_client = httpx.AsyncClient()  # cliente http para requisicoes assíncronas
+bot.http_client = httpx.AsyncClient()
 bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
 
 async def load_cogs():
-    # carrega todas as extensões (cogs) da pasta 'cogs'.
-    # isso ajuda a organizar o código em módulos.
     try:
         cogs_dir = "cogs"
         for file in os.listdir(cogs_dir):
@@ -126,7 +121,6 @@ async def load_cogs():
         logger.error(f"Erro ao carregar cogs: {e}", exc_info=True)
 
 async def sync_commands():
-    # sincroniza os comandos de barra (slash commands) com o discord.
     try:
         synced = await bot.tree.sync()
         logger.info(f"Comandos de barra sincronizados: {len(synced)}")
@@ -137,10 +131,8 @@ async def sync_commands():
 
 @bot.event
 async def on_ready():
-    # evento executado quando o bot está online e pronto.
     await load_cogs()
     synced_commands = await sync_commands()
-    # log de status com a formatação original e mais estilizada.
     logger.info(
     f"Rogerio Tech\n"
     f"Bot: {bot.user.name} (ID: {bot.user.id})\n"
@@ -152,17 +144,15 @@ async def on_ready():
     
 @bot.event
 async def on_message(message: discord.Message):
-    # evento executado para cada mensagem recebida.
-    # ignora mensagens de outros bots para evitar loops.
     if message.author.bot:
         return
     
-    logger.info(f"Mensagem de {message.author} em #{message.channel}: {message.content}")
-    # processa comandos, se houver.
+    if (f"<@{bot.user.id}>" in message.content or bot.user in message.mentions or isinstance(message.channel, discord.DMChannel)):
+        logger.info(f"Mensagem de {message.author} em #{message.channel}: {message.content}")
+    
     await bot.process_commands(message)
 
 async def main():
-    # função principal que inicia o bot.
     try:
         await bot.start(token=token)
     except discord.errors.LoginFailure:
@@ -170,7 +160,6 @@ async def main():
     except Exception as e:
         logger.error(f"Erro ao iniciar o bot: {e}", exc_info=True)
     finally:
-        # garante que os recursos sejam liberados ao fechar o bot.
         if not bot.is_closed():
             await bot.close()
         
