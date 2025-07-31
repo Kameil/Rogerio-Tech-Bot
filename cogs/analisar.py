@@ -6,8 +6,10 @@ import discord
 import httpx
 import datetime
 import textwrap
+
 from google import genai
 from google.genai import types
+from google.genai import errors as genai_errors
 
 from monitoramento import Tokens
 from typing import List, Optional
@@ -114,13 +116,13 @@ class Analisar(commands.Cog):
     async def _send_error(
             self,
             inter: discord.Interaction,
-            description: str,
+            description: str | None,
             title: str = "Ocorreu um erro!",
             color: int | discord.Color | None = discord.Color.red()
     ):
         embed = discord.Embed(
             title=title,
-            description=description,
+            description=description if description is not None else "",
             color=color
         )
         embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
@@ -183,6 +185,7 @@ class Analisar(commands.Cog):
             else:
                 # envia mensagem de erro se a imagem não pôde ser obtida
                 await inter.followup.send("Não foi possível obter a imagem do perfil do usuário.")
+        
         except discord.HTTPException as e:
             try:
                 pastebin = _pastebin_send(texto="\n".join(textos_sanatizados))
@@ -190,6 +193,27 @@ class Analisar(commands.Cog):
                 pastebin = "{pastebin_url}"
             await asyncio.sleep(10)
             await self._send_error(inter, title=f"HTTP {e.status}", description=f"A analise ficou guardada no {pastebin}")
+        except genai_errors.ServerError as e:
+            await self._send_error(
+                inter,
+                title="ERRO de comunicacao com o servidor",
+                description=e.message
+            )
+        except genai_errors.ClientError as e:
+            await self._send_error(
+                inter,
+                title="ERRO de Client",
+                description=e.message,
+                color=discord.Color.red()
+            )
+        except genai_errors.APIError as e:
+            await self._send_error(
+                inter,
+                title="ERRO de api",
+                description=e.message,
+                color=discord.Color.red()
+            )
+        
         except Exception as e:
             # envia um embed com detalhes do erro, caso ocorra
             error_text = traceback.format_exc()
