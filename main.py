@@ -32,7 +32,8 @@ if not api_key or not token:
 genai_client = genai.Client(api_key=api_key)
 
 # instrucao do sistema (personalidade)
-SYSTEM_INSTRUCTION = open("prompt", "r", encoding="utf-8").read()
+with open("prompt", "r", encoding="utf-8") as file: 
+    SYSTEM_INSTRUCTION = file.read()
 
 # importando ferramentass (tools)
 from tools.internet_search import pesquisar_na_internet
