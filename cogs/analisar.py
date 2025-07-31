@@ -66,13 +66,15 @@ class Analisar(commands.Cog):
         return messages
 
     def _criar_o_prompt(self, user: discord.User, prompt: bool | str, messages: list[str]) -> str:
-        prompt_probot = f"Analise esse usuário com base no seu nome e na sua imagem de perfil e diga se ele é desenrolado ou não. Nome: {user.name}\n"
-        if prompt is not None:
-            prompt_probot = f"Analise {prompt} | Nome do usuário: {user.name}, Mensagens do usuário:\n"
-        print(prompt_probot)
-
-        prompt_probot += "\n".join(messages)
-        return prompt_probot
+        default_response_prompt = (f"Analise esse usuário com base nas suas mensagens, nome e foto de perfil e diga se ele é "
+                         f"desenrolado ou não.")
+        params = [
+            default_response_prompt if prompt is None else prompt, # prompt do analisar
+            f"Nome do usuário: {user.name}",
+            f"Mensagens Do Usuario:" + "\n".join(messages),
+        ]
+        response_prompt = "\n".join(params)
+        return response_prompt
 
     async def _obter_imagem_do_usuario(self, user: discord.User) -> Optional[bytes]:
         # obtém a imagem de perfil do usuário
@@ -120,15 +122,18 @@ class Analisar(commands.Cog):
 
         try:
             # lista que armazena as mensagens coletadas
+            self.logger.info(f"/analisar - getting messages from {inter.guild.name}")
             messages = await self._pegar_mensagens(inter, user, mpc)
+            self.logger.info(f"/analisar - sucess getting messages from {inter.guild.name}")
             # criar o prompt
-            prompt_probot = self._criar_o_prompt(user, prompt, messages)
+
+            response_prompt: str = self._criar_o_prompt(user, prompt, messages)
             # download da imagem do usuario
             avatar = await self._obter_imagem_do_usuario(user)
             if avatar:
                 # envia o prompt e a imagem para o modelo de IA
                 response = await self.client.aio.models.generate_content(
-                    contents=[prompt_probot, types.Part.from_bytes(data=avatar, mime_type="image/png")],
+                    contents=[response_prompt, types.Part.from_bytes(data=avatar, mime_type="image/png")],
                     config=self.generation_config,
                     model=self.model
                 )
