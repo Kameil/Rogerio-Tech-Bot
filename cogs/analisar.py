@@ -194,12 +194,14 @@ class Analisar(commands.Cog):
             await asyncio.sleep(10)
             await self._send_error(inter, title=f"HTTP {e.status}", description=f"A analise ficou guardada no {pastebin}")
         except genai_errors.ServerError as e:
+            self.logger.exception("/analisar - ServerError")
             await self._send_error(
                 inter,
                 title="ERRO de comunicacao com o servidor",
                 description=e.message
             )
         except genai_errors.ClientError as e:
+            self.logger.exception("/analisar - ClientError")
             await self._send_error(
                 inter,
                 title="ERRO de Client",
@@ -207,6 +209,7 @@ class Analisar(commands.Cog):
                 color=discord.Color.red()
             )
         except genai_errors.APIError as e:
+            self.logger.exception("/analisar - APIError")
             await self._send_error(
                 inter,
                 title="ERRO de api",
