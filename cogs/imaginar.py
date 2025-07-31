@@ -5,9 +5,12 @@ import discord
 
 from google import genai
 from google.genai import types
+from google.genai import errors as genai_erros
 
 from config import api_key
 import mimetypes
+
+import traceback
 
 import io
 
@@ -62,6 +65,24 @@ class Imaginar(commands.Cog):
                     content=response.text,
 
                 )
+        except genai_erros.ServerError as e:
+            embed = discord.Embed(description="Houve um erro de conexao com o servidor. Tente Novamente.")
+            embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
+            await inter.followup.send(embed=embed)
+        except genai_erros.APIError as e:
+            title = f"APIError: Status_code: {e.status}"
+            description = "```\n" + traceback.format_exc() + "\n```"
+            if e.status == 404:
+                title="Problemas Ao Gerar Uma Imagem"
+                description="Atualmente não estamos conseguindo gerar imagem com o rogerio tech.",
+                
+            embed = discord.Embed(
+                title=title,
+                description=description,
+                color=discord.Color.red()            
+            )
+            embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
+            await inter.followup.send(embed=embed)
         except Exception as e:
             embed = discord.Embed(title="Erro", description="```py\n" + str(e) + "\n```", color=discord.Color.red())
             embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
