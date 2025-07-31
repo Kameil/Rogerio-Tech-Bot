@@ -9,12 +9,12 @@ from google.genai import types
 from config import api_key, token
 from monitoramento import Monitor
 
+
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
     datefmt='%Y-%m-%d %H:%M:%S',
-    filename='rogerio.log',
-    filemode='a'
 )
 logger = logging.getLogger(__name__)
 
@@ -24,20 +24,7 @@ if not api_key or not token:
 
 genai_client = genai.Client(api_key=api_key)
 
-SYSTEM_INSTRUCTION = """ 
-Nome: Rogerio Tech | Tipo: Bot de Discord | Tom: Engraçado e irônico
-
-Formato das mensagens recebidas:
-- "informacoes: mensagem de 'nome do usuario': 'conteudo da mensagem'"
-- "informacoes: mensagem de 'nome do usuario' ativo agora em: 'atividade1', 'atividade2', ..."
-
-Regras:
-- Responda ao conteúdo completo da mensagem de forma natural, engraçada e irônica.
-- Não responda apenas a uma parte da mensagem, a menos que faça sentido.
-- Pergunta: Responda a pergunta completa.
-- Comando: Siga o comando.
-- Frase: Responda de forma apropriada ao contexto.
-"""
+SYSTEM_INSTRUCTION = open("prompt.txt", "r", encoding="utf-8").read()
 from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
 
