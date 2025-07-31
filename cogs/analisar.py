@@ -15,13 +15,14 @@ import traceback
 import re
 import logging
 
+from discord.utils import MISSING
 from tools.pastebin import pastebin_send_text as _pastebin_send
 
 class Analisar(commands.Cog):
     def __init__(self, bot):
         self.bot: commands.Bot = bot
         self.model: str = bot.model
-        self.generation_config: types.GenerateContentConfig = bot.generation_config
+        self.generation_config: types.GenerateContentConfig = bot.generation_config # type: ignore
         self.http_client: httpx.AsyncClient = bot.http_client
         self.client: genai.Client = bot.client
         self.tokens_monitor: Tokens = bot.tokens_monitor
@@ -34,38 +35,40 @@ class Analisar(commands.Cog):
         mpc="Mensagens por canal. Padrão: 100",
         prompt="Analise + prompt | nome do usuário + mensagens do usuário"
     )
-    async def analisar(self, inter: discord.Interaction, user: discord.User, prompt: str = None, mpc: int = 100):
+    async def analisar(self, inter: discord.Interaction, user: discord.Member, prompt: None | str = None, mpc: int = 100):
         # executa a análise inicial
         await self.executar_analise(inter, user, prompt, mpc)
 
     # analisar
     def _remover_mencao(self, message: str) -> str:
-        return self._mention_re.sub("<@\1!>", message)
+        return self._mention_re.sub(lambda m: f"@<{m.group(1)}!>", message)
 
-    async def _pegar_mensagens(self, inter: discord.Interaction, user: discord.User, mpc: int) -> List[str]:
+    async def _pegar_mensagens(self, inter: discord.Interaction, user: discord.Member, mpc: int) -> List[str]:
         messages = []
 
         # itera sobre os canais de texto do servidor
-        for channel in inter.guild.text_channels:
-            bot_permissions = channel.permissions_for(inter.guild.me)
-            user_permissions = channel.permissions_for(inter.user)
-            # ignora canais sem permissão de leitura de histórico para o bot ou sem acesso para o usuário
-            if not bot_permissions.read_message_history or not user_permissions.read_messages:
-                continue
+        if inter.guild:
+            for channel in inter.guild.text_channels :
+                bot_permissions = channel.permissions_for(inter.guild.me)
+                user_permissions = channel.permissions_for(inter.user) if isinstance(inter.user, discord.Member) else False
+                # ignora canais sem permissão de leitura de histórico para o bot ou sem acesso para o usuário
+                if not bot_permissions.read_message_history or not user_permissions or not user_permissions.read_messages:
+                    continue
 
-            # coleta até 'mpc' mensagens do canal
-            async for message in channel.history(limit=mpc):
-                if message.author == user:
-                    horario_utc = message.created_at
-                    horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
-                    sanitized_content = self._remover_mencao(message.content)
-                    messages.append(
-                        f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às '
-                        f'{horario_local.strftime("%H:%M:%S %d/%m/%Y")}'
-                    )
+                # coleta até 'mpc' mensagens do canal
+                async for message in channel.history(limit=mpc):
+                    if message.author == user:
+                        horario_utc = message.created_at
+                        horario_local = horario_utc.astimezone(datetime.timezone(datetime.timedelta(hours=-3)))
+                        sanitized_content = self._remover_mencao(message.content)
+                        messages.append(
+                            f'Mensagem de {user.name} em #{message.channel.name}: "{sanitized_content}" às ' # type: ignore | ignorar o tipo do message.channel pois isso só sera executado em discord.Textchannnel | se por acaso algum erro de tipo, adicionar uma verificacao aí
+                            f'{horario_local.strftime("%H:%M:%S %d/%m/%Y")}'
+                        )
+            
         return messages
 
-    def _criar_o_prompt(self, user: discord.User, prompt: bool | str, messages: list[str]) -> str:
+    def _criar_o_prompt(self, user: discord.Member, prompt: None | str, messages: list[str]) -> str:
         default_response_prompt = (f"Analise esse usuário com base nas suas mensagens, nome e foto de perfil e diga se ele é "
                          f"desenrolado ou não.")
         params = [
@@ -76,22 +79,37 @@ class Analisar(commands.Cog):
         response_prompt = "\n".join(params)
         return response_prompt
 
-    async def _obter_imagem_do_usuario(self, user: discord.User) -> Optional[bytes]:
+    async def _obter_imagem_do_usuario(self, user: discord.Member) -> Optional[bytes]:
         # obtém a imagem de perfil do usuário
-        response = await self.http_client.get(user.avatar.url)
-        avatar = response.content if response.status_code == 200 else None
-        return avatar
+        if user.avatar:
+            response = await self.http_client.get(user.avatar.url)
+            avatar = response.content if response.status_code == 200 else None
+            return avatar
+        return None
 
     def _organizar_mensagem(self, textos: List[str]) -> List[str]:
-        return [self._remover_mencao(texto) for texto in textos]
+        mensagens_coisadas = []
+        for texto in textos:
+            self.logger.info(texto)
+            coisado = self._remover_mencao(texto)
+            self.logger.info(coisado)
+            mensagens_coisadas.append(coisado)
+        return mensagens_coisadas
 
     def _contar_os_tokens(self, response: types.GenerateContentResponse, inter: discord.Interaction):
-        usage_metadata = response.usage_metadata
-        self.tokens_monitor.insert_usage(
-        uso=usage_metadata.total_token_count,
+        if response.usage_metadata and inter.guild:
+            usage_metadata = response.usage_metadata
+            if usage_metadata.total_token_count is not None:
+                self.tokens_monitor.insert_usage(
+                uso=usage_metadata.total_token_count,
 
-        guild_id = inter.guild.id,
-        )
+                guild_id = inter.guild.id,
+                )
+                return 0
+            self.logger.info("/analisar - tokens count - total_token_count is None")
+            return 1
+        self.logger.info("/analisar - tokens count - usage_metadata or inter.guild is None")
+        return 1
 
     async def _send_error(
             self,
@@ -112,19 +130,21 @@ class Analisar(commands.Cog):
             self.logger.exception("ERROR no comando analisar")
 
 
-    async def executar_analise(self, inter: discord.Interaction, user: discord.User, prompt=None, mpc=100, janalisado=False):
+    async def executar_analise(self, inter: discord.Interaction, user: discord.Member, prompt: None | str = None, mpc=100, janalisado=False):
         # verifica se a interação ainda é válida antes de deferir
         if not inter.response.is_done():
             await inter.response.defer()
         #verifica se o comando foi executado em um canal de texto
-        if isinstance(inter.channel, discord.DMChannel):
-            return await inter.followup.send("Esse comando só pode ser executado em um servidor.")
+        if isinstance(inter.channel, discord.DMChannel) and not inter.guild and isinstance(inter.user, discord.Member):
+            return await inter.followup.send("Esse comando só pode ser executado em um servidor.", ephemeral=True)
+
 
         try:
+            guild_name = inter.guild.name if inter.guild else "{guild_name}"
             # lista que armazena as mensagens coletadas
-            self.logger.info(f"/analisar - getting messages from {inter.guild.name}")
+            self.logger.info(f"/analisar - {guild_name} - getting guild messages")
             messages = await self._pegar_mensagens(inter, user, mpc)
-            self.logger.info(f"/analisar - sucess getting messages from {inter.guild.name}")
+            self.logger.info(f"/analisar - {guild_name} - sucess getting guild messages")
             # criar o prompt
 
             response_prompt: str = self._criar_o_prompt(user, prompt, messages)
@@ -132,24 +152,34 @@ class Analisar(commands.Cog):
             avatar = await self._obter_imagem_do_usuario(user)
             if avatar:
                 # envia o prompt e a imagem para o modelo de IA
+                self.logger.info(f"/analisar - {guild_name} - getting model response.")
                 response = await self.client.aio.models.generate_content(
                     contents=[response_prompt, types.Part.from_bytes(data=avatar, mime_type="image/png")],
                     config=self.generation_config,
                     model=self.model
                 )
-                #contar os tokens
-                self._contar_os_tokens(response, inter)
+                if response.text:
+                    self.logger.info(f"/analisar - {guild_name} - sucess getting model response.")
+                    #contar os tokens
+                    self.logger.info(f"/analisar - {guild_name} - computing tokens")
+                    self._contar_os_tokens(response, inter)
+                    self.logger.info(f"/analisar - {guild_name} - sucess computing tokens")
 
 
-                # divide a resposta em partes menores para respeitar o limite do Discord
-                textos = textwrap.wrap(response.text, 1900, break_long_words=False)
-                textos_sanatizados: list[str] = self._organizar_mensagem(textos)
-                for sanitized_text in textos_sanatizados:
-                    await inter.followup.send(
-                        sanitized_text,
-                        view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id) if sanitized_text == textos_sanatizados[-1] and not janalisado else None,
-                        allowed_mentions=discord.AllowedMentions.none()
-                    )
+                    # divide a resposta em partes menores para respeitar o limite do Discord
+                    self.logger.info(f"/analisar - {guild_name} - preparing message ")
+                    print(response.text)
+                    textos = textwrap.wrap(response.text, 1900, break_long_words=False)
+                    print(textos)
+                    textos_sanatizados: list[str] = self._organizar_mensagem(textos)
+                    self.logger.info(f"/analisar - {guild_name} - sucess preparing message " + "-".join(textos_sanatizados))
+                    for sanitized_text in textos_sanatizados:
+                        await inter.followup.send(
+                            sanitized_text,
+                            view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id) if sanitized_text == textos_sanatizados[-1] and not janalisado else MISSING,
+                            allowed_mentions=discord.AllowedMentions.none()
+                        )
+                        self.logger.info(f"/analisar - {guild_name} - message sent ")
             else:
                 # envia mensagem de erro se a imagem não pôde ser obtida
                 await inter.followup.send("Não foi possível obter a imagem do perfil do usuário.")
@@ -173,7 +203,8 @@ class Analisar(commands.Cog):
                 embed=embed,
                 view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id)
             )
-            print(f"Erro ao analisar usuário em: {inter.guild.name}")
+            if inter.guild:
+                self.logger.info(f"Erro ao analisar usuário em: {inter.guild.name}")
 
     class PromptModal(discord.ui.Modal):
         def __init__(self, bot, user, mpc, author, original_prompt):
@@ -193,7 +224,7 @@ class Analisar(commands.Cog):
         async def on_submit(self, interaction: discord.Interaction):
             try:
                 # usa o novo prompt se tiver, se não usa o original
-                new_prompt = self.children[0].value if self.children[0].value else self.original_prompt
+                new_prompt = self.children[0].value if self.children[0].value else self.original_prompt # pyright: ignore[reportAttributeAccessIssue]
                 # verifica se a interação ainda é válida antes de prosseguir
                 if not interaction.response.is_done():
                     await interaction.response.defer()
@@ -247,23 +278,23 @@ class Analisar(commands.Cog):
                     ]
                 )
 
-                async def select_callback(interaction_select: discord.Interaction):
+                async def select_callback(interaction: discord.Interaction):
                     try:
                         if select.values[0] == "sim":
                             # exibe o modal p/ colocar um novo prompt
-                            await interaction_select.response.send_modal(
+                            await interaction.response.send_modal(
                                 Analisar.PromptModal(self.bot, self.user, self.mpc, self.author, self.prompt)
                             )
                         else:
                             # faz a análise com o prompt original
-                            if not interaction_select.response.is_done():
-                                await interaction_select.response.defer()
+                            if not interaction.response.is_done():
+                                await interaction.response.defer()
                             await self.bot.get_cog("Analisar").executar_analise(
-                                interaction_select, self.user, self.prompt, self.mpc, janalisado=True
+                                interaction, self.user, self.prompt, self.mpc, janalisado=True
                             )
                     except discord.HTTPException as e:
                         if e.status == 429:
-                            await Analisar._send_error(
+                            await self.bot.get_cog("Analisar")._send_error(
                                 title="Erro HTTP",
                                 description="Too many request, vá mais devagar."
                             )
@@ -271,7 +302,7 @@ class Analisar(commands.Cog):
                     except Exception:
                         error = traceback.format_exc()
                         error_msg = f"```\n{error[len(error) - 1900]}\n```" if len(error) >= 2000 else f"```\n{error}\n```"
-                        await Analisar._send_error(
+                        await self.bot.get_cog("Analisar")._send_error(
                             inter=interaction,
                             description=error_msg
                         )
