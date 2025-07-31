@@ -178,7 +178,7 @@ class Analisar(commands.Cog):
                     for sanitized_text in textos_sanatizados:
                         await inter.followup.send(
                             sanitized_text,
-                            view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id) if sanitized_text == textos_sanatizados[-1] and not janalisado else MISSING,
+                            view=Botoes(self.bot, user, prompt, mpc, author=inter.user.id) if sanitized_text == textos_sanatizados[-1] and not janalisado else MISSING,
                             allowed_mentions=discord.AllowedMentions.none()
                         )
                         self.logger.info(f"/analisar - {guild_name} - message sent ")
@@ -227,12 +227,19 @@ class Analisar(commands.Cog):
             embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
             await inter.followup.send(
                 embed=embed,
-                view=self.Botoes(self.bot, user, prompt, mpc, author=inter.user.id)
+                view=Botoes(self.bot, user, prompt, mpc, author=inter.user.id)
             )
             if inter.guild:
                 self.logger.info(f"Erro ao analisar usuário em: {inter.guild.name}")
 
-    class PromptModal(discord.ui.Modal):
+
+async def setup(bot):
+    # adiciona o cog ao bot
+    await bot.add_cog(Analisar(bot))
+
+
+
+class PromptModal(discord.ui.Modal):
         def __init__(self, bot, user, mpc, author, original_prompt):
             super().__init__(title="Novo Prompt para Análise")
             self.bot = bot
@@ -268,84 +275,80 @@ class Analisar(commands.Cog):
                 embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
                 await interaction.followup.send(embed=embed, ephemeral=False)
 
-    class Botoes(discord.ui.View):
-        def __init__(self, bot, user, prompt, mpc, author=None):
-            super().__init__(timeout=60)
-            self.bot = bot
-            self.user = user
-            self.prompt = prompt
-            self.mpc = mpc
-            self.janalisado = False
-            self.author = author
 
-        @discord.ui.button(label="Re:Analisar", style=discord.ButtonStyle.secondary)
-        async def analisar(self, interaction: discord.Interaction, button: discord.ui.Button):
-            # button nao ta sendo usado ai
-            # verifica se o usuário clicando é o autor do comando
-            if interaction.user.id != self.author:
-                return await interaction.response.send_message(
-                    "Apenas o usuário que executou o comando pode usar esse botão.",
-                    ephemeral=True
-                )
-            if self.janalisado:
-                # informa que o usuário já foi analisado
-                await interaction.response.send_message("Usuário já analisado.", ephemeral=True)
-                return None
-            else:
-                self.janalisado = True
-                # cria um menu de seleção para escolher entre novo prompt ou original
-                select = discord.ui.Select(
-                    placeholder="Usar um novo prompt?",
-                    min_values=1,
-                    max_values=1,
-                    options=[
-                        discord.SelectOption(label="Sim", value="sim", description="Usar um novo prompt para análise."),
-                        discord.SelectOption(label="Não", value="nao", description="Usar o prompt original.")
-                    ]
-                )
+class Botoes(discord.ui.View):
+    def __init__(self, bot, user, prompt, mpc, author=None):
+        super().__init__(timeout=60)
+        self.bot = bot
+        self.user = user
+        self.prompt = prompt
+        self.mpc = mpc
+        self.janalisado = False
+        self.author = author
 
-                async def select_callback(interaction: discord.Interaction):
-                    try:
-                        if select.values[0] == "sim":
-                            # exibe o modal p/ colocar um novo prompt
-                            await interaction.response.send_modal(
-                                Analisar.PromptModal(self.bot, self.user, self.mpc, self.author, self.prompt)
-                            )
-                        else:
-                            # faz a análise com o prompt original
-                            if not interaction.response.is_done():
-                                await interaction.response.defer()
-                            await self.bot.get_cog("Analisar").executar_analise(
-                                interaction, self.user, self.prompt, self.mpc, janalisado=True
-                            )
-                    except discord.HTTPException as e:
-                        if e.status == 429:
-                            await self.bot.get_cog("Analisar")._send_error(
-                                title="Erro HTTP",
-                                description="Too many request, vá mais devagar."
-                            )
+    @discord.ui.button(label="Re:Analisar", style=discord.ButtonStyle.secondary)
+    async def analisar(self, interaction: discord.Interaction, button: discord.ui.Button):
+        # button nao ta sendo usado ai
+        # verifica se o usuário clicando é o autor do comando
+        if interaction.user.id != self.author:
+            return await interaction.response.send_message(
+                "Apenas o usuário que executou o comando pode usar esse botão.",
+                ephemeral=True
+            )
+        if self.janalisado:
+            # informa que o usuário já foi analisado
+            await interaction.response.send_message("Usuário já analisado.", ephemeral=True)
+            return None
+        else:
+            self.janalisado = True
+            # cria um menu de seleção para escolher entre novo prompt ou original
+            select = discord.ui.Select(
+                placeholder="Usar um novo prompt?",
+                min_values=1,
+                max_values=1,
+                options=[
+                    discord.SelectOption(label="Sim", value="sim", description="Usar um novo prompt para análise."),
+                    discord.SelectOption(label="Não", value="nao", description="Usar o prompt original.")
+                ]
+            )
 
-                    except Exception:
-                        error = traceback.format_exc()
-                        error_msg = f"```\n{error[len(error) - 1900]}\n```" if len(error) >= 2000 else f"```\n{error}\n```"
+            async def select_callback(interaction: discord.Interaction):
+                try:
+                    if select.values[0] == "sim":
+                        # exibe o modal p/ colocar um novo prompt
+                        await interaction.response.send_modal(
+                            PromptModal(self.bot, self.user, self.mpc, self.author, self.prompt)
+                        )
+                    else:
+                        # faz a análise com o prompt original
+                        if not interaction.response.is_done():
+                            await interaction.response.defer()
+                        await self.bot.get_cog("Analisar").executar_analise(
+                            interaction, self.user, self.prompt, self.mpc, janalisado=True
+                        )
+                except discord.HTTPException as e:
+                    if e.status == 429:
                         await self.bot.get_cog("Analisar")._send_error(
-                            inter=interaction,
-                            description=error_msg
+                            title="Erro HTTP",
+                            description="Too many request, vá mais devagar."
                         )
 
-
-                select.callback = select_callback
-                view = discord.ui.View()
-                view.add_item(select)
-
-                await interaction.response.send_message(
-                    "Deseja usar um novo prompt para a análise?",
-                    view=view,
-                    ephemeral=True
-                )
-                return None
+                except Exception:
+                    error = traceback.format_exc()
+                    error_msg = f"```\n{error[len(error) - 1900]}\n```" if len(error) >= 2000 else f"```\n{error}\n```"
+                    await self.bot.get_cog("Analisar")._send_error(
+                        inter=interaction,
+                        description=error_msg
+                    )
 
 
-async def setup(bot):
-    # adiciona o cog ao bot
-    await bot.add_cog(Analisar(bot))
+            select.callback = select_callback
+            view = discord.ui.View()
+            view.add_item(select)
+
+            await interaction.response.send_message(
+                "Deseja usar um novo prompt para a análise?",
+                view=view,
+                ephemeral=True
+            )
+            return None
