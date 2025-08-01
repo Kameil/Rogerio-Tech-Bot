@@ -13,6 +13,8 @@ import logging
 from collections import deque
 import statistics
 
+from typing import Optional
+
 logger = logging.getLogger(__name__)
 
 FALLBACK_MODEL = "gemini-1.5-flash-latest" 
@@ -28,7 +30,7 @@ class ContinueView(discord.ui.View):
         super().__init__(timeout=300)
         self.author = author
         self.second_part = second_part
-        self.message: discord.Message = None
+        self.message: Optional[discord.Message] = None
 
     async def on_timeout(self):
         if self.message:
