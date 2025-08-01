@@ -28,7 +28,7 @@ class ContinueView(discord.ui.View):
         super().__init__(timeout=300)
         self.author = author
         self.second_part = second_part
-        self.message: discord.Message | None = None
+        self.message: discord.Message = None
 
     async def on_timeout(self):
         if self.message:
