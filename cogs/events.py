@@ -13,7 +13,7 @@ import logging
 from collections import deque
 import statistics
 
-from typing import Optional
+from typing import Optional, Union
 
 logger = logging.getLogger(__name__)
 
@@ -26,7 +26,7 @@ COST_PER_TEXT = 1
 COST_PER_ATTACHMENT = 4
 
 class ContinueView(discord.ui.View):
-    def __init__(self, author: discord.User, second_part: str):
+    def __init__(self, author: Union[discord.User, discord.Member], second_part: str):
         super().__init__(timeout=300)
         self.author = author
         self.second_part = second_part
@@ -233,7 +233,7 @@ class Chat(commands.Cog):
         try:
             response: types.GenerateContentResponse = await chat_session.send_message(prompt_parts)
             
-            if response.prompt_feedback and response.prompt_feedback.block_reason != 0:
+            if response.prompt_feedback and response.prompt_feedback.block_reason != 0 :
                 reason = response.prompt_feedback.block_reason.name.replace('_', ' ').title()
                 logger.warning(f"Resposta bloqueada por segurança no prompt. Razão: {reason}")
                 error_msg = f"Não consigo processar sua solicitação. Minha política de segurança a bloqueou pela seguinte razão: **{reason}**."
