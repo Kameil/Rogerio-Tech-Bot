@@ -1,22 +1,24 @@
-import discord
-from discord.ext import commands
-import httpx
-import os
 import asyncio
 import logging
+import os
+
+import discord
+import httpx
+from config import api_key, token
+from discord.ext import commands
 from google import genai
 from google.genai import types
-from config import api_key, token
+
 from monitoramento import Monitor
 
 # logging
 # gambiara fudida pra tirar o logging de afc pq eu nao tava sabendo como, isso silencia TODAS as lib
 logging.basicConfig(
-    level=logging.WARNING, # INFO para WARNING
-    format='%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s',
-    datefmt='%Y-%m-%d %H:%M:%S',
-    filename='rogerio.log',
-    filemode='a'
+    level=logging.WARNING,  # INFO para WARNING
+    format="%(asctime)s [%(levelname)s] [%(filename)s:%(lineno)d] %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+    filename="rogerio.log",
+    filemode="a",
 )
 
 logger = logging.getLogger(__name__)
@@ -32,37 +34,30 @@ if not api_key or not token:
 genai_client = genai.Client(api_key=api_key)
 
 # instrucao do sistema (personalidade)
-with open("prompt", "r", encoding="utf-8") as file: 
+with open("prompt", "r", encoding="utf-8") as file:
     SYSTEM_INSTRUCTION = file.read()
 
 # importando ferramentass (tools)
-from tools.internet_search import pesquisar_na_internet
 from tools.extract_url_text import get_url_text
+from tools.internet_search import pesquisar_na_internet
 
 # modelo padrao
-MODEL_NAME = "gemini-2.5-flash" 
+MODEL_NAME = "gemini-2.5-flash"
 GENERATION_CONFIG = types.GenerateContentConfig(
-    max_output_tokens=1800,
+    max_output_tokens=2000,
     temperature=0.7,
     system_instruction=SYSTEM_INSTRUCTION,
-    tools=[
-        get_url_text, pesquisar_na_internet
-    ]
+    tools=[get_url_text, pesquisar_na_internet],
 )
 
 # modelo experimental
 EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(
-        thinking_budget=2000,
-        include_thoughts=True
-    ),
+    thinking_config=types.ThinkingConfig(thinking_budget=2000, include_thoughts=True),
     temperature=0.7,
-    max_output_tokens=1800,
+    max_output_tokens=2000,
     response_mime_type="text/plain",
     system_instruction=SYSTEM_INSTRUCTION,
-    tools=[
-        get_url_text, pesquisar_na_internet
-    ]
+    tools=[get_url_text, pesquisar_na_internet],
 )
 
 # intents do discord
@@ -79,7 +74,7 @@ member_cache_flags.joined = True
 
 # inicialização do bot
 bot = commands.Bot(
-    command_prefix='r!',
+    command_prefix="r!",
     help_command=None,
     intents=intents,
     member_cache_flags=member_cache_flags,
@@ -96,6 +91,7 @@ bot.client = genai_client
 bot.monitor = Monitor()
 bot.tokens_monitor = bot.monitor.tokens_monitor
 
+
 async def load_cogs():
     try:
         cogs_dir = "cogs"
@@ -106,6 +102,7 @@ async def load_cogs():
     except Exception as e:
         logger.error(f"Erro ao carregar cogs: {e}", exc_info=True)
 
+
 async def sync_commands():
     try:
         synced = await bot.tree.sync()
@@ -115,28 +112,35 @@ async def sync_commands():
         logger.error(f"Erro na sincronização de comandos: {e}")
         return []
 
+
 @bot.event
 async def on_ready():
     await load_cogs()
     synced_commands = await sync_commands()
     logger.info(
-    f"Rogerio Tech\n"
-    f"Bot: {bot.user.name} (ID: {bot.user.id})\n"
-    f"Prefixo: {bot.command_prefix}\n"
-    f"Modelo: {bot.model}\n"
-    f"Comandos sincronizados: {len(synced_commands)}\n"
-    f"Online e zueiro!\n"
+        f"Rogerio Tech\n"
+        f"Bot: {bot.user.name} (ID: {bot.user.id})\n"
+        f"Prefixo: {bot.command_prefix}\n"
+        f"Modelo: {bot.model}\n"
+        f"Comandos sincronizados: {len(synced_commands)}\n"
+        f"Online e zueiro!\n"
     )
-    
+
+
 @bot.event
 async def on_message(message: discord.Message):
     if message.author.bot:
         return
-    
-    if (f"<@{bot.user.id}>" in message.content or bot.user in message.mentions or isinstance(message.channel, discord.DMChannel)):
+
+    if (
+        f"<@{bot.user.id}>" in message.content
+        or bot.user in message.mentions
+        or isinstance(message.channel, discord.DMChannel)
+    ):
         logger.info(f"Mensagem de {message.author} em #{message.channel}: {message.content}")
-    
+
     await bot.process_commands(message)
+
 
 async def main():
     try:
@@ -148,10 +152,11 @@ async def main():
     finally:
         if not bot.is_closed():
             await bot.close()
-        
+
         if not bot.http_client.is_closed:
             await bot.http_client.aclose()
             logger.info("Cliente HTTP fechado.")
+
 
 if __name__ == "__main__":
     asyncio.run(main())
