@@ -12,7 +12,7 @@ from google.genai import types as genai_types
 from google.genai import errors as genai_errors
 
 from monitoramento import Tokens
-from typing import List, Optional
+from typing import List, Optional, Union
 import traceback
 import re
 import logging
@@ -37,7 +37,7 @@ class Analisar(commands.Cog):
         mpc="Mensagens por canal. Padrão: 100",
         prompt="Analise + prompt | nome do usuário + mensagens do usuário"
     )
-    async def analisar(self, inter: discord.Interaction, user: discord.Member, prompt: None | str = None, mpc: int = 100):
+    async def analisar(self, inter: discord.Interaction, user: discord.Member, prompt: Union[str, None] = None, mpc: int = 100):
         # executa a análise inicial
         await self.executar_analise(inter, user, prompt, mpc)
 
@@ -70,7 +70,7 @@ class Analisar(commands.Cog):
             
         return messages
 
-    def _criar_o_prompt(self, user: discord.Member, prompt: None | str, messages: list[str]) -> str:
+    def _criar_o_prompt(self, user: discord.Member, prompt: Union[str, None], messages: list[str]) -> str:
         default_response_prompt = (f"Analise esse usuário com base nas suas mensagens, nome e foto de perfil e diga se ele é "
                          f"desenrolado ou não.")
         params = [
@@ -132,7 +132,7 @@ class Analisar(commands.Cog):
             self.logger.exception("ERROR no comando analisar")
 
 
-    async def executar_analise(self, inter: discord.Interaction, user: discord.Member, prompt: None | str = None, mpc=100, janalisado=False):
+    async def executar_analise(self, inter: discord.Interaction, user: discord.Member, prompt: Union[str, None] = None, mpc=100, janalisado=False):
         # verifica se a interação ainda é válida antes de deferir
         if not inter.response.is_done():
             await inter.response.defer()
