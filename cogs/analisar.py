@@ -188,7 +188,7 @@ class Analisar(commands.Cog):
         
         except discord.HTTPException as e:
             try:
-                pastebin = _pastebin_send(texto="\n".join(textos_sanatizados))
+                pastebin = _pastebin_send(texto="\n".join(textos_sanatizados), client=self.http_client)
             except:
                 pastebin = "{pastebin_url}"
             await asyncio.sleep(10)
