@@ -13,6 +13,8 @@ import logging
 from collections import deque
 import statistics
 
+from typing import Optional, Union
+
 logger = logging.getLogger(__name__)
 
 FALLBACK_MODEL = "gemini-1.5-flash-latest"
@@ -59,11 +61,11 @@ class DetailsView(discord.ui.View):
         self.stop()
 
 class ContinueView(discord.ui.View):
-    def __init__(self, author: discord.User, second_part: str):
+    def __init__(self, author: Union[discord.User, discord.Member], second_part: str):
         super().__init__(timeout=300)
         self.author = author
         self.second_part = second_part
-        self.message: discord.Message = None
+        self.message: Optional[discord.Message] = None
 
     async def on_timeout(self):
         if self.message:
@@ -251,7 +253,8 @@ class Chat(commands.Cog):
             chat_session = self.chats[channel_id]["session"]
         try:
             response: types.GenerateContentResponse = await chat_session.send_message(prompt_parts)
-            if response.prompt_feedback and response.prompt_feedback.block_reason != 0:
+            
+            if response.prompt_feedback and response.prompt_feedback.block_reason != 0 :
                 reason = response.prompt_feedback.block_reason.name.replace('_', ' ').title()
                 logger.warning(f"resposta bloqueada (prompt). razão: {reason}")
                 await message.reply(f"minha política de segurança bloqueou sua solicitação. razão: **{reason}**.", mention_author=False)
