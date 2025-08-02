@@ -37,7 +37,7 @@ Para reportar bugs, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/
 
 ## 🔍 Transparência e Melhoria Contínua
 
-Para aprimorar a qualidade das respostas e otimizar a experiência do usuário, o Rogério Tech pode armazenar logs anônimos de interações. Esses dados são usados exclusivamente para análise e refinamento do bot, garantindo privacidade e segurança aos usuários.
+Para melhorar a qualidade das respostas e proporcionar uma experiência mais fluida, o Rogério Tech pode armazenar logs das interações **com o bot**. Esses dados são utilizados apenas para análise e aprimoramento do bot. Ao usar o bot, você concorda com o descrito acima.
 
 ---
 
