@@ -69,8 +69,7 @@ class Chat(commands.Cog):
         self.security_cog: Security = None
 
     async def cog_load(self):
-        # garante que a referencia ao cog de seguranca seja pega apos o bot carregar tudo
-        self.security_cog = self.bot.get_cog("security")
+        self.security_cog = self.bot.get_cog("Security")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
@@ -116,7 +115,7 @@ class Chat(commands.Cog):
                     description=f"Não foi possível processar sua solicitação.\n```py\n{traceback.format_exc(limit=1)}\n```",
                     color=discord.Color.red(),
                 )
-                embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
+                error_embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
                 try:
                     await message.channel.send(embed=error_embed)
                 except discord.HTTPException: pass
