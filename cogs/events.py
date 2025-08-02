@@ -69,19 +69,15 @@ class Chat(commands.Cog):
         self.security_cog: Security = None
 
     async def cog_load(self):
-        # tenta pegar o cog na inicializacao
         self.security_cog = self.bot.get_cog("Security")
         if self.security_cog:
             logger.info("Cog 'Security' referenciado com sucesso em 'Chat'.")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        # se o cog de seguranca nao foi carregado na inicializacao (condicao de corrida),
-        # tenta pega-lo novamente aqui. se falhar de novo, desiste.
         if self.security_cog is None:
             self.security_cog = self.bot.get_cog("Security")
             if self.security_cog is None:
-                # este log so vai aparecer se houver um erro grave no carregamento do security.py
                 logger.error("Cog 'Security' não encontrado. As mensagens não serão processadas.")
                 return 
         
@@ -94,7 +90,6 @@ class Chat(commands.Cog):
         if not perms.send_messages:
             return
 
-        # logica de anti-flood
         message_cost = self.security_cog.COST_PER_TEXT + (len(message.attachments) * self.security_cog.COST_PER_ATTACHMENT)
         if await self.security_cog.is_rate_limited(message.author.id, message_cost):
             logger.warning(f"usuario {message.author.id} foi limitado por flood. custo: {message_cost}")
@@ -103,7 +98,6 @@ class Chat(commands.Cog):
             except discord.HTTPException: pass
             return
 
-        # sistema de fila para processar uma mensagem por canal de cada vez
         channel_id = str(message.channel.id)
         if channel_id not in self.message_queue:
             self.message_queue[channel_id] = Queue()
@@ -145,8 +139,13 @@ class Chat(commands.Cog):
         await self._send_reply(response, message)
 
     async def _build_prompt_parts(self, message: discord.Message) -> list | None:
+        if isinstance(message.channel, discord.DMChannel):
+            context = f'Voce esta em uma conversa privada com "{message.author.display_name}".'
+        else:
+            context = f'Voce esta no canal #{message.channel.name} do servidor "{message.guild.name}".'
+
         clean_message = message.content.replace(f"<@{self.bot.user.id}>", "Rogerio Tech").strip()
-        prompt_parts = [f'informacoes: mensagem de "{message.author.display_name}": "{clean_message}"']
+        prompt_parts = [f'Contexto: {context}\nMensagem de "{message.author.display_name}": "{clean_message}"']
         
         if message.attachments:
             attachment_parts = await self._process_attachments(message)
@@ -183,12 +182,8 @@ class Chat(commands.Cog):
             else (self.bot.model, self.bot.generation_config)
         )
         
-        if channel_id not in self.chats or self.chats[channel_id].get("model") != model_name:
-            logger.info(f"criando/trocando sessão para o canal {channel_id} (modelo: {model_name})")
-            chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
-            self.chats[channel_id] = {"session": chat_session, "model": model_name}
-        else:
-            chat_session = self.chats[channel_id]["session"]
+        logger.info(f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})")
+        chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
             
         try:
             response = await chat_session.send_message(prompt_parts)
@@ -226,23 +221,30 @@ class Chat(commands.Cog):
             logger.warning("a resposta da api estava vazia após a limpeza.")
             return
 
-        summary_match = re.search(r"\[RESUMO\](.*?)\[DETALHES\]", clean_text, re.DOTALL)
+        match = re.search(r"\[RESUMO\](.*?)\[DETALHES\](.*)", clean_text, re.DOTALL)
+        
+        full_reply_text = ""
+        summary_text = ""
+        details_text = ""
 
-        if summary_match:
-            summary_text = summary_match.group(1).strip()
-            details_text = clean_text[summary_match.end(0):].strip() # pega tudo depois de [RESUMO]...[DETALHES]
-            if not summary_text:
-                summary_text = "A resposta é um pouco longa, mas aqui está! Clique no botão para ver os detalhes."
-        elif len(clean_text) > CHARACTER_LIMIT:
-            summary_text = "A resposta é um pouco longa, clique no botão abaixo para ver os detalhes."
-            details_text = clean_text
+        if match:
+            summary_text = match.group(1).strip()
+            details_text = match.group(2).strip()
+            full_reply_text = f"{summary_text}\n\n{details_text}".strip()
         else:
-            await message.reply(clean_text, mention_author=False)
-            return
+            full_reply_text = clean_text
 
-        view = DetailsView(author=message.author, full_text=details_text)
-        reply_message = await message.reply(summary_text, view=view, mention_author=False)
-        view.message = reply_message
+        if len(full_reply_text) <= CHARACTER_LIMIT:
+            await message.reply(full_reply_text, mention_author=False)
+        else:
+            if not summary_text:
+                summary_text = "A resposta é um pouco longa, clique no botão abaixo para ver os detalhes."
+            if not details_text:
+                details_text = full_reply_text
+
+            view = DetailsView(author=message.author, full_text=details_text)
+            reply_message = await message.reply(summary_text, view=view, mention_author=False)
+            view.message = reply_message
 
     def remover_pensamento_da_resposta(self, resposta: str) -> str:
         return re.sub(r"```[\r]?\nPensamento:[\r]?\n.*?\n```", "", resposta, flags=re.DOTALL).strip()
