@@ -69,12 +69,21 @@ class Chat(commands.Cog):
         self.security_cog: Security = None
 
     async def cog_load(self):
-        # garante que a referencia ao cog de seguranca seja pega apos o bot carregar tudo
-        self.security_cog = self.bot.get_cog("security")
+        # tenta pegar o cog na inicializacao
+        self.security_cog = self.bot.get_cog("Security")
+        if self.security_cog:
+            logger.info("Cog 'Security' referenciado com sucesso em 'Chat'.")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
-        if self.security_cog is None: return # nao processa mensagens se o cog de seguranca nao carregou
+        # se o cog de seguranca nao foi carregado na inicializacao (condicao de corrida),
+        # tenta pega-lo novamente aqui. se falhar de novo, desiste.
+        if self.security_cog is None:
+            self.security_cog = self.bot.get_cog("Security")
+            if self.security_cog is None:
+                # este log so vai aparecer se houver um erro grave no carregamento do security.py
+                logger.error("Cog 'Security' não encontrado. As mensagens não serão processadas.")
+                return 
         
         if message.author.bot or not (
             self.bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel)
@@ -116,7 +125,7 @@ class Chat(commands.Cog):
                     description=f"Não foi possível processar sua solicitação.\n```py\n{traceback.format_exc(limit=1)}\n```",
                     color=discord.Color.red(),
                 )
-                embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
+                error_embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
                 try:
                     await message.channel.send(embed=error_embed)
                 except discord.HTTPException: pass
