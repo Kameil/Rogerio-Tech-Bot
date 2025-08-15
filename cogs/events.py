@@ -174,13 +174,24 @@ class Chat(commands.Cog):
 
     async def _send_to_genai(self, prompt_parts: list, message: discord.Message) -> types.GenerateContentResponse | None:
         channel_id = str(message.channel.id)
-        is_experimental = channel_id in self.chats.get("experimental", [])
         
+        # --- DESCONTINUADO POR HORA ---
+        # a funcionalidade experimental foi desativada.
+        # is_experimental = channel_id in self.chats.get("experimental", [])
+        
+        #original era:
+        # model_name, gen_config = (
+        #     ("gemini-1.5-pro-latest", self.bot.experimental_generation_config) if is_experimental
+        #     else (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
+        #     else (self.bot.model, self.bot.generation_config)
+        # )
+        
+        # logica de seleção de modelo atualizada, sem o modo experimental
         model_name, gen_config = (
-            ("gemini-1.5-pro-latest", self.bot.experimental_generation_config) if is_experimental
-            else (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
+            (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
             else (self.bot.model, self.bot.generation_config)
         )
+        # --- DESCONTINUADO POR HORA ---
         
         logger.info(f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})")
         chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
