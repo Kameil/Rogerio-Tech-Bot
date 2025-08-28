@@ -1,7 +1,7 @@
 # 🤖 Rogério Tech
 
 <p align="center">
-  <a href="https://top.gg/bot/1041361324506087555">
+  <a href="https://top.gg/bot/1041361324506087555" target="_blank">
     <img src="https://top.gg/api/widget/servers/1041361324506087555.svg" alt="Rogério Tech Server Count">
   </a>
 </p>
@@ -54,8 +54,8 @@ O projeto atingiu seus objetivos de aprendizado e funcionalidades essenciais já
 
 ## 📚 Documentação
 
-- [Documentação da API Google](https://googleapis.github.io/python-genai/)  
-- [Guia rápido Gemini API](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
+- <a href="https://googleapis.github.io/python-genai/" target="_blank">Documentação da API Google</a>  
+- <a href="https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python" target="_blank">Guia rápido Gemini API</a>
 
 ---
 
@@ -80,11 +80,11 @@ O projeto atingiu seus objetivos de aprendizado e funcionalidades essenciais já
 
 ## 📨 Suporte e Convite
 
-- [Servidor oficial Discord](https://discord.gg/H77FTb7hw) – apenas para reportar problemas e tirar dúvidas.  
-- Convide o bot: [Clique aqui](https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot).
+- <a href="https://discord.gg/H77FTb7hw" target="_blank">Servidor oficial Discord</a> – apenas para reportar problemas e tirar dúvidas.  
+- Convide o bot: <a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot" target="_blank">Clique aqui</a>.
 
 <p align="center">
-  <a href="https://top.gg/bot/1041361324506087555">
+  <a href="https://top.gg/bot/1041361324506087555" target="_blank">
     <img src="https://top.gg/api/widget/1041361324506087555.svg?status" alt="Rogério Tech Status">
   </a>
 </p>
