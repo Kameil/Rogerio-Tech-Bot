@@ -1,4 +1,4 @@
-# Rogério Tech
+# 🤖 Rogério Tech
 
 <p align="center">
   <a href="https://top.gg/bot/1041361324506087555">
@@ -7,81 +7,81 @@
 </p>
 
 <p align="center">
-  <img src="https://i.imgur.com/TKphVxW.png" width="250" height="250" alt="Rogério Tech Logo">
+  <img src="https://i.imgur.com/TKphVxW.png" width="200" alt="Rogério Tech Logo">
 </p>
 
 ---
 
-## 📝 Sobre o Projeto
+## 📌 Sobre o Projeto
 
-Rogério Tech é um bot para Discord desenvolvido em Python, utilizando a API do Google para fornecer respostas inteligentes e funcionalidades úteis. Criado por [Kameil](https://github.com/Kameil) (ideia e desenvolvimento) e [g](https://github.com/cafewhaze) (ajustes e documentação), este projeto foi uma jornada de aprendizado para automatizar tarefas, responder perguntas e oferecer suporte eficiente. Embora o desenvolvimento esteja concluído, o código-fonte permanece público para estudo e revisão.
+Rogério Tech é um bot para Discord desenvolvido em Python, utilizando a API do Google para fornecer respostas inteligentes e funcionalidades úteis, com foco em aprendizado e automação de tarefas.
 
----
-
-## ⚠️ Atenção
-
-> **Cuidado**: O único repositório oficial é [Kameil/Rogerio-Tech-Bot](https://github.com/Kameil/Rogerio-Tech-Bot).
-
-Para reportar bugs, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues). O projeto está finalizado, mas aceitamos sugestões de melhorias via pull requests.
+O desenvolvimento está **concluído**, mas o código permanece público para estudo e contribuições.
 
 ---
 
-## ✨ Funcionalidades
+> [!CAUTION]  
+> O único repositório oficial é [Kameil/Rogerio-Tech-Bot](https://github.com/Kameil/Rogerio-Tech-Bot).  
+> Para reportar problemas, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
 
-- **Respostas Inteligentes**: Interação em tempo real com comandos e perguntas.
-- **Pesquisa Avançada**: Informações atualizadas utilizando a API do Google.
-- **Análise de Conteúdo**: Suporte para perfis, posts, links e arquivos.
-- **Customização**: Adaptável às necessidades de cada servidor.
+---
+
+## ⚙️ Funcionalidades
+
+- **Respostas inteligentes** em tempo real via API do Google.
+- **Pesquisa avançada** e análise de links, posts e arquivos.
+- **Customização** para diferentes servidores.
+- **Logs de interação** para análise e melhoria contínua.
 
 ---
 
 ## 🔍 Transparência e Melhoria Contínua
 
-Com o objetivo de aprimorar continuamente a qualidade das respostas e oferecer uma experiência de interação mais fluida e eficiente, o Rogério Tech poderá armazenar logs das interações realizadas com o bot. Ressaltamos que esses dados serão utilizados exclusivamente para fins de análise e melhoria do desempenho do sistema, garantindo total respeito à sua privacidade. Ao utilizar o bot, você concorda com os termos descritos acima.
+> [!IMPORTANT]  
+> O Rogério Tech pode armazenar logs das interações realizadas com o bot. Esses dados são usados **exclusivamente** para análise e melhoria do desempenho do sistema, garantindo respeito à sua privacidade. <ins>Ao utilizar o bot, você concorda com esses termos.
 
 ---
 
-## ❓ Perguntas Frequentes (FAQ)
+## ❓ FAQ
 
-### O bot é confiável?
-Sim! O código-fonte é público e o bot não exige permissões excessivas.
+**O bot é confiável?**  
+Sim, o código-fonte é público e não exige permissões excessivas.
 
-### Por que o projeto foi finalizado?
-Rogério Tech foi um projeto pessoal de aprendizado. Com as metas atingidas e muitas funcionalidades já disponíveis em outros bots, o desenvolvimento foi encerrado.
+**Por que o projeto foi finalizado?**  
+O projeto atingiu seus objetivos de aprendizado e funcionalidades essenciais já estão disponíveis.  
 
 ---
 
 ## 📚 Documentação
 
-Consulte a documentação da API do Google integrada ao projeto:
-
-- [Documentação Principal](https://googleapis.github.io/python-genai/)
-- [Guia Rápido da API Gemini](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
+- [Documentação da API Google](https://googleapis.github.io/python-genai/)  
+- [Guia rápido Gemini API](https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python)
 
 ---
 
-## 🛠️ Tecnologias Utilizadas
+## 🛠️ Tecnologias
 
-Desenvolvido em **Python**. Veja as dependências no arquivo [requirements.txt](requirements.txt).
+- **Python**  
+- Dependências listadas em [requirements.txt](requirements.txt)
 
 ---
 
 ## 🚀 Como Contribuir
 
-1. Faça um fork deste repositório.
-2. Crie uma branch para sua funcionalidade (`git checkout -b feature/nova-funcionalidade`).
-3. Commit suas alterações (`git commit -m "Adiciona nova funcionalidade"`).
+1. Faça um fork do repositório.
+2. Crie uma branch (`git checkout -b feature/nova-funcionalidade`).
+3. Faça commits claros (`git commit -m "Adiciona nova funcionalidade"`).
 4. Envie um pull request.
 
-Gostou do projeto? Dê uma ⭐ no repositório!
+> [!NOTE]  
+> Mesmo com o projeto finalizado, sugestões e correções via pull request são bem-vindas.
 
 ---
 
-## 📬 Suporte e Convite
+## 📨 Suporte e Convite
 
-- Para reportar bugs, [abra uma issue](https://github.com/Kameil/Rogerio-Tech-Bot/issues).
-- Nosso [servidor no Discord](https://discord.gg/H77FTb7hwH) é exclusivo para reportar problemas.
-- Convide o Rogério Tech para seu servidor: [clique aqui](https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot).
+- [Servidor oficial Discord](https://discord.gg/H77FTb7hw) – apenas para reportar problemas e tirar dúvidas.  
+- Convide o bot: [Clique aqui](https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot).
 
 <p align="center">
   <a href="https://top.gg/bot/1041361324506087555">
@@ -92,5 +92,5 @@ Gostou do projeto? Dê uma ⭐ no repositório!
 ---
 
 <div align="center">
-  Bot criado com ❤️ por <a href="https://github.com/Kameil"><strong>Kameil</strong></a> (ideia & desenvolvimento) e <a href="https://github.com/cafewhaze"><strong>g</strong></a> (ajustes & README + Wiki)
+  Criado por <a href="https://github.com/Kameil"><strong>Kameil</strong></a> e <a href="https://github.com/cafewhaze"><strong>g</strong></a>
 </div>
