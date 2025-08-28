@@ -1,3 +1,5 @@
+# kameil nao arrumou esse comando pq ele eh preguicoso entao foi descontinuado, eu NAO vou tentar arrumar ele 
+
 # import discord
 # from discord import app_commands
 # from discord.ext import commands

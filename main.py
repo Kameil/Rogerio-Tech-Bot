@@ -50,15 +50,15 @@ GENERATION_CONFIG = types.GenerateContentConfig(
     tools=[get_url_text, pesquisar_na_internet],
 )
 
-# modelo experimental
-EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
-    thinking_config=types.ThinkingConfig(thinking_budget=2000, include_thoughts=True),
-    temperature=0.7,
-    max_output_tokens=2000,
-    response_mime_type="text/plain",
-    system_instruction=SYSTEM_INSTRUCTION,
-    tools=[get_url_text, pesquisar_na_internet],
-)
+# # modelo experimental
+# EXPERIMENTAL_GENERATION_CONFIG = types.GenerateContentConfig(
+#     thinking_config=types.ThinkingConfig(thinking_budget=2000, include_thoughts=True),
+#     temperature=0.7,
+#     max_output_tokens=2000,
+#     response_mime_type="text/plain",
+#     system_instruction=SYSTEM_INSTRUCTION,
+#     tools=[get_url_text, pesquisar_na_internet],
+# )
 
 # intents do discord
 intents = discord.Intents.none()
@@ -81,11 +81,12 @@ bot = commands.Bot(
 )
 
 # armazena os objetos e configurações no bot para acesso global pelos cogs
-bot.chats = {"experimental": []}
+# bot.chats = {"experimental": []}
+bot.chats = {}
 bot.model = MODEL_NAME
 bot.system_instruction = SYSTEM_INSTRUCTION
 bot.generation_config = GENERATION_CONFIG
-bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
+#bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
 bot.http_client = httpx.AsyncClient()
 bot.client = genai_client
 bot.monitor = Monitor()
@@ -96,11 +97,9 @@ async def load_cogs():
     try:
         cogs_dir = "cogs"
         for file in os.listdir(cogs_dir):
-            if file.endswith(".py") and file != "experimental.py":
+            if file.endswith(".py") and file not in ["experimental.py", "imaginar.py"]:
                 await bot.load_extension(f"{cogs_dir}.{file[:-3]}")
                 logger.info(f"Cog '{file[:-3]}' carregado com sucesso.")
-            elif file == "experimental.py":
-                logger.info("Cog 'experimental.py' ignorado e não será carregado.") 
     except Exception as e:
         logger.error(f"Erro ao carregar cogs: {e}", exc_info=True)
 
