@@ -35,13 +35,6 @@ O desenvolvimento está **concluído**, mas o código permanece público para es
 
 ---
 
-## 🔍 Transparência e Melhoria Contínua
-
-> [!IMPORTANT]  
-> O Rogério Tech pode armazenar logs das interações realizadas com o bot. Esses dados são usados **exclusivamente** para análise e melhoria do desempenho do sistema, garantindo respeito à sua privacidade. <ins>Ao utilizar o bot, você concorda com esses termos.
-
----
-
 ## ❓ FAQ
 
 **O bot é confiável?**  
