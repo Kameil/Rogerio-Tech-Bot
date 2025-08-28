@@ -2,7 +2,6 @@ import discord
 from discord.ext import commands
 from discord import app_commands
 import httpx
-import base64
 import datetime
 import textwrap
 import traceback
