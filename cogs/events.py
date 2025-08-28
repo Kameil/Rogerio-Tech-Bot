@@ -217,7 +217,7 @@ class Chat(commands.Cog):
             logger.error(f"erro na api do google: {e}")
             await message.reply(f"ocorreu um erro com a api do google: `{e}`", mention_author=False)
         except Exception as e:
-            logger.error(f"erro inesperado ao enviar para a api genai: {e}")
+            logger.exception(f"erro inesperado ao enviar para a api genai")
             await message.reply(f"ocorreu um erro ao comunicar com a api.", mention_author=False)
         return None
 
