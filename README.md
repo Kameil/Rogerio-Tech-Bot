@@ -74,7 +74,7 @@ O projeto atingiu seus objetivos de aprendizado e funcionalidades essenciais já
 ## 📨 Suporte e Convite
 
 - <a href="https://discord.gg/H77FTb7hw" target="_blank">Servidor oficial Discord</a> – apenas para reportar problemas e tirar dúvidas.  
-- Convide o bot: <a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=274877982736&integration_type=0&scope=bot" target="_blank">Clique aqui</a>.
+- Convide o bot: <a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=277025508416&integration_type=0&scope=applications.commands+bot" target="_blank">Clique aqui</a>.
 
 <p align="center">
   <a href="https://top.gg/bot/1041361324506087555" target="_blank">
