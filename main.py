@@ -8,6 +8,7 @@ from config import api_key, token
 from discord.ext import commands
 from google import genai
 from google.genai import types
+from boas_vindas import welcome
 
 from monitoramento import Monitor
 
@@ -142,6 +143,9 @@ async def on_message(message: discord.Message):
 
     await bot.process_commands(message)
 
+@bot.event
+async def on_member_join(member):
+    await welcome.handle_member_join(member)
 
 async def main():
     try:
