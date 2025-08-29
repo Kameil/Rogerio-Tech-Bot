@@ -44,4 +44,4 @@ Podemos atualizar nossa Política de Privacidade periodicamente. Notificaremos v
 
 ### 8. Contato
 
-Se você tiver alguma dúvida sobre esta Política de Privacidade, entre em contato conosco através do nosso [servidor oficial no Discord](https://discord.gg/H77FTb7hw).
+Se você tiver alguma dúvida sobre esta Política de Privacidade, entre em contato conosco através do nosso [servidor oficial no Discord](https://discord.gg/H77FTb7hwH).
