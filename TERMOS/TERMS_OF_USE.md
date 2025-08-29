@@ -46,4 +46,4 @@ Podemos suspender ou encerrar seu acesso ao bot imediatamente, sem aviso prévio
 
 ### 9. Contato
 
-Se você tiver alguma dúvida sobre estes Termos de Uso, entre em contato conosco através do nosso [servidor oficial no Discord](https://discord.gg/H77FTb7hw).
+Se você tiver alguma dúvida sobre estes Termos de Uso, entre em contato conosco através do nosso [servidor oficial no Discord](https://discord.gg/H77FTb7hwH).
