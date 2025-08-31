@@ -14,6 +14,7 @@ from google.genai import types
 from google.genai.errors import ClientError, ServerError
 
 from .security import Security
+from tools.extract_url_text import get_url_text
 
 logger = logging.getLogger(__name__)
 
@@ -173,6 +174,16 @@ class Chat(commands.Cog):
                 await message.reply(f"Não consegui ler o anexo '{attachment.filename}'", mention_author=False)
                 return None
         return parts
+
+    async def check_tools_in_response(self, response: types.GenerateContentResponse, message: discord.Message) -> bool:
+        padrao = r"```openlink\n(\S*?)\n```"
+        result = re.search(padrao, response.text)
+        if not result:
+            return False
+        url_text = get_url_text(result.group(1))
+        prompt_parts = [f'contexto: Voce abriu a url "{result.group(1)}" e extraiu o seguinte texto: {url_text}',]
+        await self._send_to_genai(prompt_parts=prompt_parts, message=message)
+
 
     async def _send_to_genai(self, prompt_parts: list, message: discord.Message) -> types.GenerateContentResponse | None:
         # verifica se o "disjuntor" (circuit breaker) global está ativo
