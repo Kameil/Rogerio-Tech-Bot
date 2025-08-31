@@ -191,7 +191,11 @@ class Chat(commands.Cog):
         )
         
         logger.info(f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})")
-        chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
+        if self.chats.get(channel_id):
+            chat_session = self.chats[channel_id]
+        else:
+            chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
+            self.chats[channel_id] = chat_session
             
         try:
             response = await chat_session.send_message(prompt_parts)
