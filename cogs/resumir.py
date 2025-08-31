@@ -1,29 +1,29 @@
+import logging
 from discord.ext import commands
 from discord import app_commands
 import discord
 import asyncio
 
+logger = logging.getLogger(__name__)
 
 class Resumir(commands.Cog):
     def __init__(self, bot):
         self.bot = bot
-        self.modelo = bot.model
+        self.genai_model = bot.model
         self.config = bot.generation_config
         self.cliente = bot.client
 
     class BotoesResumo(discord.ui.View):
-        def __init__(self, bot, canal, usuario=None, limite=100, autor_id=None, privado=False):
-            super().__init__(timeout=150)  # tempo para os botões funcionarem
+        # a view agora recebe a lista de mensagens ja coletada para otimizar o processo
+        def __init__(self, bot, mensagens: list[str], autor_id: int, privado: bool = False):
+            super().__init__(timeout=150)
             self.bot = bot
-            self.canal = canal
-            self.usuario = usuario
-            self.limite = limite
+            self.mensagens = mensagens
             self.autor_id = autor_id
-            self.privado = privado  # armazena se a interação é privada
+            self.privado = privado
 
         @discord.ui.button(label="Mais Detalhes", style=discord.ButtonStyle.primary)
         async def mais_detalhes(self, interacao: discord.Interaction, botao: discord.ui.Button):
-            # verifica se quem clicou é o autor do comando
             if interacao.user.id != self.autor_id:
                 await interacao.response.send_message(
                     "Só quem usou o comando pode clicar neste botão!",
@@ -32,113 +32,95 @@ class Resumir(commands.Cog):
                 return
 
             try:
-                mensagens = await self._coletar_mensagens(interacao)
-                if not mensagens:
-                    await interacao.response.send_message("Não achei mensagens para resumir :/", ephemeral=True)
+                if not self.mensagens:
+                    await interacao.response.send_message("Não há mensagens para detalhar :/", ephemeral=True)
                     return
 
-                # mostrar a resposta para indicar que está processando
+                botao.disabled = True
+                await interacao.message.edit(view=self)
+                
                 is_dm = interacao.guild is None
-                await interacao.response.defer(thinking=True, ephemeral=self.privado and not is_dm)  # respeita privacidade, exceto em dms
+                await interacao.response.defer(thinking=True, ephemeral=self.privado and not is_dm)
 
+                # prompt refinado para exigir a formatacao de topicos exata que voce pediu
                 prompt = (
-                    "Resuma essas mensagens do canal do Discord com mais detalhes, incluindo exemplos e contexto dos "
-                    "principais assuntos:\n\n" + "\n".join(mensagens)
+                    "Sua tarefa é criar um resumo detalhado das mensagens do Discord a seguir. "
+                    "Organize a resposta como uma lista de tópicos. Cada tópico deve seguir estritamente este formato: `- **Título do Tópico**: Descrição.` "
+                    "Por exemplo:\n- **Assunto Principal**: Discussão sobre o erro X no banco de dados.\n- **Solução Proposta**: Apagar o arquivo para forçar a recriação.\n"
+                    "Não use tags como '[resumo]' ou '[detalhes]'. Entregue apenas a lista de tópicos formatada.\n\nmensagens:\n" 
+                    + "\n".join(self.mensagens)
                 )
-                resumo = await self.bot.get_cog("Resumir")._fazer_resumo(interacao, prompt)
-                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo, privado=self.privado and not is_dm)
+                
+                # o bot usa a lista de mensagens que ja tinha, sem precisar buscar no canal de novo
+                resumo_detalhado = await self.bot.get_cog("Resumir")._fazer_resumo(interacao, prompt)
+                await self.bot.get_cog("Resumir")._enviar_resumo(interacao, resumo_detalhado, privado=self.privado and not is_dm)
+            
             except Exception as erro:
-                try:
-                    await interacao.followup.send(embed=discord.Embed(
-                        title="Erro",
-                        description=f"Deu erro ao fazer resumo detalhado: {str(erro)}\nTipo do erro: {type(erro).__name__}",
-                        color=discord.Color.red()
-                    ), ephemeral=True)
-                except discord.errors.NotFound:
-                    # se o webhook estiver inválido, tenta enviar diretamente no canal
-                    await interacao.channel.send(embed=discord.Embed(
-                        title="Erro",
-                        description=f"Deu erro ao fazer resumo detalhado: {str(erro)}\nTipo do erro: {type(erro).__name__}",
-                        color=discord.Color.red()
-                    ))
+                logger.error(f"Erro ao gerar resumo detalhado: {erro}", exc_info=True)
+                await interacao.followup.send(f"Ocorreu um erro ao gerar os detalhes: {erro}", ephemeral=True)
 
-        async def _coletar_mensagens(self, interacao: discord.Interaction):
-            mensagens = []
-            async for mensagem in self.canal.history(limit=self.limite):
-                if not mensagem.author.bot and (self.usuario is None or mensagem.author == self.usuario):
-                    texto = f"{mensagem.author.display_name}: {mensagem.content}"
-                    mensagens.append(texto)
-            return mensagens
 
     async def _fazer_resumo(self, inter: discord.Interaction, prompt: str):
-        # faz o resumo usando o modelo de IA
         resposta = await self.cliente.aio.models.generate_content(
-            model=self.modelo,
+            model=f'models/{self.genai_model}',
             contents=prompt,
             config=self.config
         )
-        return resposta.text.strip()
+        
+        try:
+            text_parts = [part.text for part in resposta.candidates[0].content.parts if hasattr(part, "text")]
+            text = "".join(text_parts)
+            return text.strip()
+        except (ValueError, IndexError):
+            logger.warning("Não foi possível extrair texto da resposta da API em resumir")
+            return "Não foi possível gerar o resumo pois a resposta da API estava vazia"
 
     async def _enviar_resumo(self, inter: discord.Interaction, resumo: str, privado: bool, view: discord.ui.View = None):
-        # em dms, não usar ephemeral, pois já é privado
         is_dm = inter.guild is None
-        ephemeral = privado and not is_dm  # só usar ephemeral se privado=True e não for DM
+        ephemeral = privado and not is_dm
 
         try:
             if len(resumo) > 1900:
                 partes = [resumo[i:i + 1900] for i in range(0, len(resumo), 1900)]
                 for i, parte in enumerate(partes):
-                    # só passa view na última parte e se view existir
                     kwargs = {'ephemeral': ephemeral}
                     if view and i == len(partes) - 1:
                         kwargs['view'] = view
                     await inter.followup.send(parte, **kwargs)
             else:
-                # passa view só se existir
                 kwargs = {'ephemeral': ephemeral}
                 if view:
                     kwargs['view'] = view
                 await inter.followup.send(resumo, **kwargs)
         except discord.errors.NotFound:
-            # se o webhook estiver inválido, tenta enviar diretamente no canal
             kwargs = {'view': view} if view else {}
             await inter.channel.send(resumo, **kwargs)
 
-    @app_commands.command(name="resumir", description="Faz um resumo das mensagens recentes do canal.")
+    @app_commands.command(name="resumir", description="Faz um resumo das mensagens recentes do canal")
     @app_commands.describe(
-        limite="Quantas mensagens coletar (máximo 200, padrão 100).",
-        usuario="Resumir só mensagens de um usuário (opcional).",
-        privado="Enviar o resumo só para você (padrão: não | não é possivel usar em DMs)."
+        limite="Quantas mensagens coletar (máximo 200, padrão 100)",
+        usuario="Resumir só mensagens de um usuário (opcional)",
+        privado="Enviar o resumo só para você (padrão: não | não é possível usar em dms)"
     )
     async def resumir(self, inter: discord.Interaction, limite: int = 100, usuario: discord.User = None, privado: bool = False):
         try:
-            # em dms, forçar privado=False, pois já é privado por natureza
             is_dm = inter.guild is None
             if is_dm:
                 privado = False
 
-            # resposta imediata para evitar expiração da interação
             await inter.response.defer(thinking=True, ephemeral=privado)
 
-            # verificar permissões apenas em canais de servidor
             if not is_dm:
                 permissoes = inter.channel.permissions_for(inter.guild.me)
                 if not permissoes.read_message_history:
-                    try:
-                        await inter.followup.send("Não tenho permissão para ler mensagens neste canal.", ephemeral=True)
-                    except discord.errors.NotFound:
-                        await inter.channel.send("Não tenho permissão para ler mensagens neste canal.")
+                    await inter.followup.send("Não tenho permissão para ler mensagens neste canal", ephemeral=True)
                     return
 
-            # validar limite
-            if limite < 1 or limite > 200:
-                try:
-                    await inter.followup.send("O limite deve ser entre 1 e 200 mensagens.", ephemeral=True)
-                except discord.errors.NotFound:
-                    await inter.channel.send("O limite deve ser entre 1 e 200 mensagens.")
+            if not 1 <= limite <= 200:
+                await inter.followup.send("O limite deve ser entre 1 e 200 mensagens", ephemeral=True)
                 return
 
-            # coletar mensagens
+            # as mensagens do historico sao coletadas aqui, e apenas uma vez
             mensagens = []
             async for mensagem in inter.channel.history(limit=limite):
                 if not mensagem.author.bot and (usuario is None or mensagem.author == usuario):
@@ -146,44 +128,29 @@ class Resumir(commands.Cog):
                     mensagens.append(texto)
 
             if not mensagens:
-                try:
-                    await inter.followup.send("Não achei mensagens para resumir com esses critérios :/", ephemeral=True)
-                except discord.errors.NotFound:
-                    await inter.channel.send("Não achei mensagens para resumir com esses critérios :/")
+                await inter.followup.send("Não achei mensagens para resumir com esses critérios :/", ephemeral=True)
                 return
 
-            # preparar prompt e fazer resumo
-            prompt = (
-                "Resuma essas mensagens do canal do Discord de forma simples e clara, destacando os principais "
-                "assuntos:\n\n" + "\n".join(mensagens)
+            # o primeiro prompt agora e focado em um resumo simples e rapido
+            prompt_simples = (
+                "Sua tarefa é criar um resumo conciso e claro das mensagens do Discord a seguir. "
+                "Destaque os principais tópicos de forma breve. Não use títulos nem formatação complexa. "
+                "Apenas o texto do resumo.\n\nmensagens:\n" + "\n".join(mensagens)
             )
-            resumo = await self._fazer_resumo(inter, prompt)
+            resumo_inicial = await self._fazer_resumo(inter, prompt_simples)
 
-            # criar view sempre, passando o parâmetro privado
-            view = self.BotoesResumo(self.bot, inter.channel, usuario, limite, inter.user.id, privado=privado)
+            # a lista de mensagens coletadas e passada para a view, otimizando o processo
+            view = self.BotoesResumo(self.bot, mensagens, inter.user.id, privado=privado)
 
-            # enviar resumo
-            await self._enviar_resumo(
-                inter,
-                resumo,
-                privado=privado,
-                view=view
-            )
+            await self._enviar_resumo(inter, resumo_inicial, privado=privado, view=view)
 
         except Exception as erro:
-            try:
-                await inter.followup.send(embed=discord.Embed(
-                    title="Erro",
-                    description=f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}",
-                    color=discord.Color.red()
-                ), ephemeral=True)
-            except discord.errors.NotFound:
-                # se o webhook estiver inválido, envia diretamente no canal
-                await inter.channel.send(embed=discord.Embed(
-                    title="Erro",
-                    description=f"Deu erro ao resumir: {str(erro)}\nTipo do erro: {type(erro).__name__}",
-                    color=discord.Color.red()
-                ))
+            logger.error(f"Erro no comando /resumir: {erro}", exc_info=True)
+            if not inter.response.is_done():
+                await inter.response.send_message(f"Ocorreu um erro: {erro}", ephemeral=True)
+            else:
+                await inter.followup.send(f"Ocorreu um erro: {erro}", ephemeral=True)
+
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(Resumir(bot))

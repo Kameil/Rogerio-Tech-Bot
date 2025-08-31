@@ -43,7 +43,7 @@ class DetailsView(discord.ui.View):
     async def details_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.author.id:
             await interaction.response.send_message(
-                "Apenas o autor da mensagem original pode fazer isso.", ephemeral=True
+                "Apenas o autor da mensagem original pode fazer isso", ephemeral=True
             )
             return
 
@@ -73,14 +73,14 @@ class Chat(commands.Cog):
     async def cog_load(self):
         self.security_cog = self.bot.get_cog("Security")
         if self.security_cog:
-            logger.info("Cog 'Security' referenciado com sucesso em 'Chat'.")
+            logger.info("Cog 'Security' referenciado com sucesso em 'Chat'")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if self.security_cog is None:
             self.security_cog = self.bot.get_cog("Security")
             if self.security_cog is None:
-                logger.error("Cog 'Security' não encontrado. As mensagens não serão processadas.")
+                logger.error("Cog 'Security' não encontrado. As mensagens não serão processadas")
                 return 
         
         if message.author.bot or not (
@@ -118,7 +118,7 @@ class Chat(commands.Cog):
                 logger.error(f"Erro crítico ao processar a mensagem {message.id}: {e}", exc_info=True)
                 error_embed = discord.Embed(
                     title="Ocorreu um erro inesperado!",
-                    description=f"Não foi possivel processar sua solicitacao.\n```py\n{traceback.format_exc(limit=1)}\n```",
+                    description=f"Não foi possivel processar sua solicitacao\n```py\n{traceback.format_exc(limit=1)}\n```",
                     color=discord.Color.red(),
                 )
                 error_embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
@@ -142,9 +142,9 @@ class Chat(commands.Cog):
 
     async def _build_prompt_parts(self, message: discord.Message) -> list | None:
         if isinstance(message.channel, discord.DMChannel):
-            context = f'Você está em uma conversa privada com "{message.author.display_name}".'
+            context = f'você está em uma conversa privada com "{message.author.display_name}"'
         else:
-            context = f'Você está no canal #{message.channel.name} do servidor "{message.guild.name}".'
+            context = f'você está no canal #{message.channel.name} do servidor "{message.guild.name}"'
 
         clean_message = message.content.replace(f"<@{self.bot.user.id}>", "Rogerio Tech").strip()
         prompt_parts = [f'contexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"']
@@ -160,7 +160,7 @@ class Chat(commands.Cog):
         parts = []
         for attachment in message.attachments:
             if attachment.size > ATTACHMENT_SIZE_LIMIT_MB * 1024 * 1024:
-                error_msg = f"O anexo '{attachment.filename}' é muito grande ({attachment.size / 1024 / 1024:.2f} MB). O limite e de {ATTACHMENT_SIZE_LIMIT_MB} MB."
+                error_msg = f"O anexo '{attachment.filename}' é muito grande ({attachment.size / 1024 / 1024:.2f} MB). O limite e de {ATTACHMENT_SIZE_LIMIT_MB} MB"
                 logger.warning(error_msg)
                 await message.reply(error_msg, mention_author=False)
                 return None
@@ -170,21 +170,21 @@ class Chat(commands.Cog):
                 parts.append(types.Part.from_bytes(data=content_bytes, mime_type=mime_type))
             except Exception as e:
                 logger.error(f"Falha ao processar o anexo {attachment.filename} em memória: {e}")
-                await message.reply(f"Não consegui ler o anexo '{attachment.filename}'.", mention_author=False)
+                await message.reply(f"Não consegui ler o anexo '{attachment.filename}'", mention_author=False)
                 return None
         return parts
 
     async def _send_to_genai(self, prompt_parts: list, message: discord.Message) -> types.GenerateContentResponse | None:
-        # melhoria(ou tentativ): verifica se o "disjuntor" (circuit breaker) global esta ativo
+        # verifica se o "disjuntor" (circuit breaker) global está ativo
         if self.global_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < self.global_cooldown_until:
             wait_seconds = (self.global_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
-            logger.warning("Requisição bloqueada pelo cooldown global da API.")
-            await message.reply(f"O sistema está sobrecarregado. Por favor, tente novamente em **{int(wait_seconds) + 1} segundos**.", mention_author=False)
+            logger.warning("Requisição bloqueada pelo cooldown global da API")
+            await message.reply(f"O sistema está sobrecarregado. Por favor, tente novamente em **{int(wait_seconds) + 1} segundos**", mention_author=False)
             return None
         
         channel_id = str(message.channel.id)
         
-        # logica de selecao de modelo atualizada
+        # lógica de seleção de modelo atualizada
         model_name, gen_config = (
             (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
             else (self.bot.model, self.bot.generation_config)
@@ -198,11 +198,11 @@ class Chat(commands.Cog):
             if response.prompt_feedback and response.prompt_feedback.block_reason != 0:
                 reason = response.prompt_feedback.block_reason.name.replace('_', ' ').title()
                 logger.warning(f"Resposta bloqueada (prompt). Razão: {reason}")
-                await message.reply(f"Minha política de segurança bloqueou sua solicitação. Razão: **{reason}**.", mention_author=False)
+                await message.reply(f"Minha política de segurança bloqueou sua solicitação. Razão: **{reason}**", mention_author=False)
                 return None
             if not response.candidates:
-                logger.warning("Resposta da API sem candidatos (provavelmente bloqueada por segurança).")
-                await message.reply("Não consegui gerar uma resposta, provavelmente por violar minhas políticas de segurança.", mention_author=False)
+                logger.warning("Resposta da API sem candidatos (provavelmente bloqueada por segurança)")
+                await message.reply("Não consegui gerar uma resposta, provavelmente por violar minhas políticas de segurança", mention_author=False)
                 return None
             if response.usage_metadata:
                 self.monitor.tokens_monitor.insert_usage(
@@ -211,35 +211,35 @@ class Chat(commands.Cog):
                 )
             return response
         except ServerError as e: # captura erros de servidor (como 5xx e 429)
-            # melhoria(ou tentativa): implementa o "disjuntor" se o erro for de cota
+            # implementa o "disjuntor" se o erro for de cota
             if "429" in str(e):
-                logger.error(f"Erro de cota (429) detectado. Ativando cooldown global de 30 segundos.")
+                logger.error(f"Erro de cota (429) detectado. Ativando cooldown global de 30 segundos")
                 self.global_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=30)
-                await message.reply("Estamos com um volume muito alto de requisições. Por favor, tente novamente em alguns instantes.", mention_author=False)
+                await message.reply("Estamos com um volume muito alto de requisições. Por favor, tente novamente em alguns instantes", mention_author=False)
             else:
                 logger.error(f"Erro na API do Google (servidor): {e}")
                 await message.reply(f"Ocorreu um erro com a api do google: `{e}`", mention_author=False)
-        except ClientError as e: # captura erros do lado do cliente (como requisicao mal formatada)
+        except ClientError as e: # captura erros do lado do cliente (como requisição mal formatada)
             logger.error(f"Erro na API do Google (cliente): {e}")
             await message.reply(f"Ocorreu um erro com a API do Google: `{e}`", mention_author=False)
         except Exception as e:
             logger.exception(f"Erro inesperado ao enviar para a API GenAI")
-            await message.reply(f"Ocorreu um erro ao comunicar com a API.", mention_author=False)
+            await message.reply(f"Ocorreu um erro ao comunicar com a API", mention_author=False)
         return None
 
     async def _send_reply(self, response: types.GenerateContentResponse, message: discord.Message):
-        # melhoria(ou tentativa): extrai o texto de forma segura para evitar o aviso "non-text parts"
+        # extrai o texto de forma segura para evitar o aviso "non-text parts"
         try:
             text_parts = [part.text for part in response.candidates[0].content.parts if hasattr(part, "text")]
             text = "".join(text_parts)
         except (ValueError, IndexError):
-            logger.warning("Não foi possível extrair texto da resposta da API.")
+            logger.warning("Não foi possível extrair texto da resposta da API")
             text = ""
             
         clean_text = self.remover_pensamento_da_resposta(text).strip()
         if not clean_text:
-            logger.warning("A resposta da API estava vazia após a limpeza.")
-            await message.reply("Recebi uma resposta vazia e não pude processá-la.", mention_author=False)
+            logger.warning("A resposta da API estava vazia após a limpeza")
+            await message.reply("Recebi uma resposta vazia e não pude processá-la", mention_author=False)
             return
 
         match = re.search(r"\[RESUMO\](.*?)\[DETALHES\](.*)", clean_text, re.DOTALL)
@@ -259,7 +259,7 @@ class Chat(commands.Cog):
             await message.reply(full_reply_text, mention_author=False)
         else:
             if not summary_text:
-                summary_text = "A resposta e um pouco longa, clique no botão abaixo para ver os detalhes."
+                summary_text = "A resposta é um pouco longa, clique no botão abaixo para ver os detalhes"
             if not details_text:
                 details_text = full_reply_text
 
