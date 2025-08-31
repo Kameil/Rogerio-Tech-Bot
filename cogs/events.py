@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import logging
 import re
 import traceback
@@ -42,7 +43,7 @@ class DetailsView(discord.ui.View):
     async def details_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.author.id:
             await interaction.response.send_message(
-                "Apenas o autor da mensagem original pode fazer isso.", ephemeral=True
+                "apenas o autor da mensagem original pode fazer isso.", ephemeral=True
             )
             return
 
@@ -67,18 +68,19 @@ class Chat(commands.Cog):
         self.processing = {}
         self.message_queue = {}
         self.security_cog: Security = None
+        self.global_cooldown_until = None # para o controle de erro de cota (429)
 
     async def cog_load(self):
         self.security_cog = self.bot.get_cog("Security")
         if self.security_cog:
-            logger.info("Cog 'Security' referenciado com sucesso em 'Chat'.")
+            logger.info("cog 'Security' referenciado com sucesso em 'Chat'.")
 
     @commands.Cog.listener()
     async def on_message(self, message: discord.Message):
         if self.security_cog is None:
             self.security_cog = self.bot.get_cog("Security")
             if self.security_cog is None:
-                logger.error("Cog 'Security' não encontrado. As mensagens não serão processadas.")
+                logger.error("cog 'Security' nao encontrado. as mensagens nao serao processadas.")
                 return 
         
         if message.author.bot or not (
@@ -113,13 +115,13 @@ class Chat(commands.Cog):
             try:
                 await self.handle_message(message)
             except Exception as e:
-                logger.error(f"erro crítico ao processar a mensagem {message.id}: {e}", exc_info=True)
+                logger.error(f"erro critico ao processar a mensagem {message.id}: {e}", exc_info=True)
                 error_embed = discord.Embed(
-                    title="Ocorreu Um Erro Inesperado!",
-                    description=f"Não foi possível processar sua solicitação.\n```py\n{traceback.format_exc(limit=1)}\n```",
+                    title="ocorreu um erro inesperado!",
+                    description=f"nao foi possivel processar sua solicitacao.\n```py\n{traceback.format_exc(limit=1)}\n```",
                     color=discord.Color.red(),
                 )
-                error_embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
+                error_embed.set_footer(text="suporte: https://discord.gg/H77FTb7hwH")
                 try:
                     await message.channel.send(embed=error_embed)
                 except discord.HTTPException: pass
@@ -140,12 +142,12 @@ class Chat(commands.Cog):
 
     async def _build_prompt_parts(self, message: discord.Message) -> list | None:
         if isinstance(message.channel, discord.DMChannel):
-            context = f'Voce esta em uma conversa privada com "{message.author.display_name}".'
+            context = f'voce esta em uma conversa privada com "{message.author.display_name}".'
         else:
-            context = f'Voce esta no canal #{message.channel.name} do servidor "{message.guild.name}".'
+            context = f'voce esta no canal #{message.channel.name} do servidor "{message.guild.name}".'
 
         clean_message = message.content.replace(f"<@{self.bot.user.id}>", "Rogerio Tech").strip()
-        prompt_parts = [f'Contexto: {context}\nMensagem de "{message.author.display_name}": "{clean_message}"']
+        prompt_parts = [f'contexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"']
         
         if message.attachments:
             attachment_parts = await self._process_attachments(message)
@@ -158,7 +160,7 @@ class Chat(commands.Cog):
         parts = []
         for attachment in message.attachments:
             if attachment.size > ATTACHMENT_SIZE_LIMIT_MB * 1024 * 1024:
-                error_msg = f"O anexo '{attachment.filename}' é muito grande ({attachment.size / 1024 / 1024:.2f} MB). O limite é de {ATTACHMENT_SIZE_LIMIT_MB} MB."
+                error_msg = f"O anexo '{attachment.filename}' e muito grande ({attachment.size / 1024 / 1024:.2f} mb). o limite e de {ATTACHMENT_SIZE_LIMIT_MB} mb."
                 logger.warning(error_msg)
                 await message.reply(error_msg, mention_author=False)
                 return None
@@ -167,45 +169,40 @@ class Chat(commands.Cog):
                 mime_type = attachment.content_type or "application/octet-stream"
                 parts.append(types.Part.from_bytes(data=content_bytes, mime_type=mime_type))
             except Exception as e:
-                logger.error(f"falha ao processar o anexo {attachment.filename} em memória: {e}")
-                await message.reply(f"Não consegui ler o anexo '{attachment.filename}'.", mention_author=False)
+                logger.error(f"falha ao processar o anexo {attachment.filename} em memoria: {e}")
+                await message.reply(f"Nao consegui ler o anexo '{attachment.filename}'.", mention_author=False)
                 return None
         return parts
 
     async def _send_to_genai(self, prompt_parts: list, message: discord.Message) -> types.GenerateContentResponse | None:
+        # melhoria(ou tentativ): verifica se o "disjuntor" (circuit breaker) global esta ativo
+        if self.global_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < self.global_cooldown_until:
+            wait_seconds = (self.global_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+            logger.warning("requisicao bloqueada pelo cooldown global da api.")
+            await message.reply(f"O sistema esta sobrecarregado. por favor, tente novamente em **{int(wait_seconds) + 1} segundos**.", mention_author=False)
+            return None
+        
         channel_id = str(message.channel.id)
         
-        # --- DESCONTINUADO POR HORA ---
-        # a funcionalidade experimental foi desativada.
-        # is_experimental = channel_id in self.chats.get("experimental", [])
-        
-        #original era:
-        # model_name, gen_config = (
-        #     ("gemini-1.5-pro-latest", self.bot.experimental_generation_config) if is_experimental
-        #     else (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
-        #     else (self.bot.model, self.bot.generation_config)
-        # )
-        
-        # logica de seleção de modelo atualizada, sem o modo experimental
+        # logica de selecao de modelo atualizada
         model_name, gen_config = (
             (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
             else (self.bot.model, self.bot.generation_config)
         )
-        # --- DESCONTINUADO POR HORA ---
         
-        logger.info(f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})")
+        logger.info(f"criando sessao de chat sem memoria para o canal {channel_id} (modelo: {model_name})")
         chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
             
         try:
             response = await chat_session.send_message(prompt_parts)
             if response.prompt_feedback and response.prompt_feedback.block_reason != 0:
                 reason = response.prompt_feedback.block_reason.name.replace('_', ' ').title()
-                logger.warning(f"resposta bloqueada (prompt). razão: {reason}")
-                await message.reply(f"minha política de segurança bloqueou sua solicitação. razão: **{reason}**.", mention_author=False)
+                logger.warning(f"resposta bloqueada (prompt). razao: {reason}")
+                await message.reply(f"Minha politica de seguranca bloqueou sua solicitacao. razao: **{reason}**.", mention_author=False)
                 return None
             if not response.candidates:
-                logger.warning("resposta da api sem candidatos (provavelmente bloqueada por segurança).")
-                await message.reply("não consegui gerar uma resposta, provavelmente por violar minhas políticas de segurança.", mention_author=False)
+                logger.warning("resposta da api sem candidatos (provavelmente bloqueada por seguranca).")
+                await message.reply("Nao consegui gerar uma resposta, provavelmente por violar minhas politicas de seguranca.", mention_author=False)
                 return None
             if response.usage_metadata:
                 self.monitor.tokens_monitor.insert_usage(
@@ -213,23 +210,36 @@ class Chat(commands.Cog):
                     guild_id=message.guild.id if message.guild else "dm",
                 )
             return response
-        except (ClientError, ServerError) as e:
-            logger.error(f"erro na api do google: {e}")
-            await message.reply(f"ocorreu um erro com a api do google: `{e}`", mention_author=False)
+        except ServerError as e: # captura erros de servidor (como 5xx e 429)
+            # melhoria(ou tentativa): implementa o "disjuntor" se o erro for de cota
+            if "429" in str(e):
+                logger.error(f"erro de cota (429) detectado. ativando cooldown global de 30 segundos.")
+                self.global_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=30)
+                await message.reply("Estamos com um volume muito alto de requisicoes. por favor, tente novamente em alguns instantes.", mention_author=False)
+            else:
+                logger.error(f"erro na api do google (servidor): {e}")
+                await message.reply(f"Ocorreu um erro com a api do google: `{e}`", mention_author=False)
+        except ClientError as e: # captura erros do lado do cliente (como requisicao mal formatada)
+            logger.error(f"erro na api do google (cliente): {e}")
+            await message.reply(f"Ocorreu um erro com a api do google: `{e}`", mention_author=False)
         except Exception as e:
             logger.exception(f"erro inesperado ao enviar para a api genai")
-            await message.reply(f"ocorreu um erro ao comunicar com a api.", mention_author=False)
+            await message.reply(f"Ocorreu um erro ao comunicar com a api.", mention_author=False)
         return None
 
     async def _send_reply(self, response: types.GenerateContentResponse, message: discord.Message):
+        # melhoria(ou tentativa): extrai o texto de forma segura para evitar o aviso "non-text parts"
         try:
-            text = response.text
-        except ValueError:
+            text_parts = [part.text for part in response.candidates[0].content.parts if hasattr(part, "text")]
+            text = "".join(text_parts)
+        except (ValueError, IndexError):
+            logger.warning("nao foi possivel extrair texto da resposta da api.")
             text = ""
             
         clean_text = self.remover_pensamento_da_resposta(text).strip()
         if not clean_text:
-            logger.warning("a resposta da api estava vazia após a limpeza.")
+            logger.warning("a resposta da api estava vazia apos a limpeza.")
+            await message.reply("recebi uma resposta vazia e nao pude processa-la.", mention_author=False)
             return
 
         match = re.search(r"\[RESUMO\](.*?)\[DETALHES\](.*)", clean_text, re.DOTALL)
@@ -249,7 +259,7 @@ class Chat(commands.Cog):
             await message.reply(full_reply_text, mention_author=False)
         else:
             if not summary_text:
-                summary_text = "A resposta é um pouco longa, clique no botão abaixo para ver os detalhes."
+                summary_text = "a resposta e um pouco longa, clique no botao abaixo para ver os detalhes."
             if not details_text:
                 details_text = full_reply_text
 
