@@ -34,7 +34,7 @@ class DetailsView(discord.ui.View):
     async def on_timeout(self):
         if self.message:
             try:
-                self.message.edit(view=None)
+                await self.message.edit(view=None)
             except discord.HTTPException:
                 pass # ignora erros se a mensagem original for apagada
 
