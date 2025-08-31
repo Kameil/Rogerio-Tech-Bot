@@ -50,13 +50,13 @@ class Security(commands.Cog):
             if current_hour_usage > high_traffic_threshold and not self.is_high_traffic_mode:
                 self.is_high_traffic_mode = True
                 logger.warning(
-                    f"limiar de trafego alto atingido. modo de economia ativado (usando {self.FALLBACK_MODEL})"
+                    f"Limiar de trafego alto atingido. Modo de economia ativado (usando {self.FALLBACK_MODEL})"
                 )
             elif current_hour_usage < normal_traffic_threshold and self.is_high_traffic_mode:
                 self.is_high_traffic_mode = False
-                logger.info("trafego normalizado. modo de economia desativado")
+                logger.info("Trafego normalizado. Modo de economia desativado")
         except Exception as e:
-            logger.error(f"erro ao verificar o trafego de tokens: {e}")
+            logger.error(f"Erro ao verificar o trafego de tokens: {e}")
 
     async def is_rate_limited(self, user_id: int, cost: float) -> bool:
         # implementacao do leaky bucket para limitar a taxa de requisicoes por usuario

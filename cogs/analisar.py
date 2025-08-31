@@ -92,7 +92,7 @@ class Analisar(commands.Cog):
         )
         
         if not response.candidates:
-            reason = "desconhecida"
+            reason = "Desconhecida"
             if response.prompt_feedback and response.prompt_feedback.block_reason:
                 reason = response.prompt_feedback.block_reason.name
             raise AnalysisBlockedError(f"A resposta foi bloqueada pela API por motivo de segurança: {reason}")
