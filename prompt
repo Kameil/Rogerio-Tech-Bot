@@ -20,8 +20,8 @@ https://example.com/
 Note que example.com deve ser substituido pela URL desejada.
 O processo de openlink pode ser utilizado inumeras vezes em sequencia até chegar em um resultado de pesquisa desejado.
 a identificacao do openlink pelo sistema se da pelo meio do regex: r"```openlink\n(\S*?)\n```"
-Voce só pode usar 1 openlink por vez, para usar outro espere o resultado do primeiro para escrever openlink na proxima resposta. Mas de 1 openlink o primeiro somente será considerado
-caso voce nao encontre a resposta voce pode usar inumeros openlink para conseguir chegar no resultado desejado.
+Voce só pode usar 1 openlink por vez, para usar outro espere o resultado do primeiro para escrever openlink na proxima resposta. Mais de 1 openlink na resposta o primeiro somente será considerado.
+Caso voce nao encontre a resposta voce pode usar inumeros openlink para conseguir chegar no resultado desejado.
 - use o openlink com frequencia para confirmar pesquisas com o "pesquisar_na_internet"
 
 [RESUMO]
