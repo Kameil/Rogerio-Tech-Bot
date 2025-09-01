@@ -38,7 +38,7 @@ class DetailsView(discord.ui.View):
             try:
                 await self.message.edit(view=None)
             except discord.HTTPException:
-                pass # ignora erros se a mensagem original for apagada
+                pass 
 
     @discord.ui.button(label="📄 Ver detalhes", style=discord.ButtonStyle.secondary)
     async def details_button(self, interaction: discord.Interaction, button: discord.ui.Button):
@@ -48,11 +48,10 @@ class DetailsView(discord.ui.View):
             )
             return
 
-        await interaction.response.defer(ephemeral=True) # confirma o recebimento da interacao
+        await interaction.response.defer(ephemeral=True) 
         button.disabled = True
         await interaction.message.edit(view=self)
 
-        # envia o texto completo em pedacos, caso exceda o limite por mensagem
         for i in range(0, len(self.full_text), CHARACTER_LIMIT):
             chunk = self.full_text[i : i + CHARACTER_LIMIT]
             await interaction.followup.send(chunk, ephemeral=False)
@@ -69,7 +68,7 @@ class Chat(commands.Cog):
         self.processing = {}
         self.message_queue = {}
         self.security_cog: Security = None
-        self.global_cooldown_until = None # para o controle de erro de cota (429)
+        self.global_cooldown_until = None 
 
     async def cog_load(self):
         self.security_cog = self.bot.get_cog("Security")
@@ -148,32 +147,65 @@ class Chat(commands.Cog):
             context = f'você está no canal #{message.channel.name} do servidor "{message.guild.name}"'
 
         clean_message = message.content.replace(f"<@{self.bot.user.id}>", "Rogerio Tech").strip()
+        
         prompt_parts = [f'contexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"']
         
         if message.attachments:
-            attachment_parts = await self._process_attachments(message)
-            if attachment_parts is None: return None
-            prompt_parts.extend(attachment_parts)
+            attachment_parts, text_file_contents = await self._process_attachments(message)
+            if attachment_parts is None and text_file_contents is None: return None
+            
+            # adiciona o conteúdo dos arquivos de texto ao prompt principal
+            if text_file_contents:
+                prompt_parts.append(text_file_contents)
+
+            # adiciona outros anexos (imagens, etc.)
+            if attachment_parts:
+                prompt_parts.extend(attachment_parts)
             
         return prompt_parts
 
-    async def _process_attachments(self, message: discord.Message) -> list | None:
+    async def _process_attachments(self, message: discord.Message) -> tuple[list | None, str | None]:
         parts = []
+        text_contents = []
+
         for attachment in message.attachments:
             if attachment.size > ATTACHMENT_SIZE_LIMIT_MB * 1024 * 1024:
                 error_msg = f"O anexo '{attachment.filename}' é muito grande ({attachment.size / 1024 / 1024:.2f} MB). O limite e de {ATTACHMENT_SIZE_LIMIT_MB} MB"
                 logger.warning(error_msg)
                 await message.reply(error_msg, mention_author=False)
-                return None
+                return None, None
+            
             try:
                 content_bytes = await attachment.read()
                 mime_type = attachment.content_type or "application/octet-stream"
-                parts.append(types.Part.from_bytes(data=content_bytes, mime_type=mime_type))
+
+                # verifica se o anexo é um arquivo de texto e o trata de forma diferente
+                if mime_type.startswith("text/"):
+                    try:
+                        # tenta decodificar como UTF-8, mas usa 'latin-1' como fallback para evitar erros
+                        text = content_bytes.decode('utf-8', errors='replace')
+                        text_contents.append(f'\n\n--- CONTEÚDO DO ARQUIVO "{attachment.filename}" ---\n{text}')
+                    except Exception as e:
+                        logger.error(f"Não foi possível ler o conteúdo do arquivo de texto {attachment.filename}: {e}")
+                        await message.reply(f"Não consegui ler o conteúdo do arquivo de texto '{attachment.filename}'.", mention_author=False)
+                        return None, None
+                else:
+                    # p/ outros tipos de arquivo (imagens, etc.), envia como anexo binário
+                    parts.append(types.Part.from_bytes(data=content_bytes, mime_type=mime_type))
+
+            except discord.HTTPException as e:
+                logger.error(f"Falha ao baixar o anexo {attachment.filename}: {e}")
+                await message.reply(f"Não consegui baixar o anexo '{attachment.filename}'", mention_author=False)
+                return None, None
             except Exception as e:
-                logger.error(f"Falha ao processar o anexo {attachment.filename} em memória: {e}")
+                logger.error(f"Falha ao processar o anexo {attachment.filename}: {e}")
                 await message.reply(f"Não consegui ler o anexo '{attachment.filename}'", mention_author=False)
-                return None
-        return parts
+                return None, None
+        
+        # junta todo o conteúdo de texto de múltiplos arquivos em uma única string
+        full_text_content = "\n".join(text_contents) if text_contents else None
+        return parts if parts else None, full_text_content
+
 
     async def check_tools_in_response(self, response: str, message: discord.Message) -> bool:
         padrao = r"```openlink\n(\S*?)\n```"
