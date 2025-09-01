@@ -270,11 +270,11 @@ class Chat(commands.Cog):
                 self.global_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=30)
                 await message.reply("Estamos com um volume muito alto de requisições. Por favor, tente novamente em alguns instantes", mention_author=False)
             else:
-                logger.error(f"Erro na API do Google (servidor): {e}")
-                await message.reply(f"Ocorreu um erro com a api do google: `{e}`", mention_author=False)
+                logger.error(f"Erro na API do Google (servidor): {e}\n**Suporte:** <https://discord.gg/H77FTb7hwH>")
+                await message.reply(f"Ocorreu um erro com a api do google: `{e}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>", mention_author=False)
         except ClientError as e: # captura erros do lado do cliente (como requisição mal formatada)
             logger.error(f"Erro na API do Google (cliente): {e}")
-            await message.reply(f"Ocorreu um erro com a API do Google: `{e}`", mention_author=False)
+            await message.reply(f"Ocorreu um erro com a API do Google: `{e}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>", mention_author=False)
         except Exception as e:
             logger.exception(f"Erro inesperado ao enviar para a API GenAI")
             await message.reply(f"Ocorreu um erro ao comunicar com a API", mention_author=False)
