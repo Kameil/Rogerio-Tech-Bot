@@ -187,6 +187,8 @@ class Chat(commands.Cog):
         
         prompt_parts = [f'contexto: Voce abriu a url "{result.group(1)}" e extraiu o seguinte texto: {url_text}',]
         response = await self._send_to_genai(prompt_parts=prompt_parts, message=message)
+        if not response:
+            return False
         await self._send_reply(response, message)
         return True
 
