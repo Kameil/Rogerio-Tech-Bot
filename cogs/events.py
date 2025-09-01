@@ -175,14 +175,20 @@ class Chat(commands.Cog):
                 return None
         return parts
 
-    async def check_tools_in_response(self, response: types.GenerateContentResponse, message: discord.Message) -> bool:
+    async def check_tools_in_response(self, response: str, message: discord.Message) -> bool:
         padrao = r"```openlink\n(\S*?)\n```"
-        result = re.search(padrao, response.text)
+        result = re.search(padrao, response)
         if not result:
             return False
-        url_text = get_url_text(result.group(1))
+        try:
+            url_text = await get_url_text(result.group(1))
+        except Exception as e:
+            url_text = f"Não consegui extrair o texto da URL {result.group(1)}. Erro: {e}"
+        
         prompt_parts = [f'contexto: Voce abriu a url "{result.group(1)}" e extraiu o seguinte texto: {url_text}',]
-        await self._send_to_genai(prompt_parts=prompt_parts, message=message)
+        response = await self._send_to_genai(prompt_parts=prompt_parts, message=message)
+        await self._send_reply(response, message)
+        return True
 
 
     async def _send_to_genai(self, prompt_parts: list, message: discord.Message) -> types.GenerateContentResponse | None:
@@ -272,6 +278,7 @@ class Chat(commands.Cog):
 
         if len(full_reply_text) <= CHARACTER_LIMIT:
             await message.reply(full_reply_text, mention_author=False)
+            
         else:
             if not summary_text:
                 summary_text = "A resposta é um pouco longa, clique no botão abaixo para ver os detalhes"
@@ -281,6 +288,8 @@ class Chat(commands.Cog):
             view = DetailsView(author=message.author, full_text=details_text)
             reply_message = await message.reply(summary_text, view=view, mention_author=False)
             view.message = reply_message
+        print(full_reply_text)
+        await self.check_tools_in_response(full_reply_text, message)
 
     def remover_pensamento_da_resposta(self, resposta: str) -> str:
         return re.sub(r"```[\r]?\nPensamento:[\r]?\n.*?\n```", "", resposta, flags=re.DOTALL).strip()
