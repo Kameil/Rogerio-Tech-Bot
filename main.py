@@ -43,7 +43,7 @@ from tools.extract_url_text import get_url_text
 from tools.internet_search import pesquisar_na_internet
 
 # modelo padrao
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-flash-lite"
 GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=2000,
     temperature=0.7,
