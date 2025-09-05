@@ -14,12 +14,18 @@ async def get_url_text(url: str) -> str:
     response = await client.get(url)
     logger.info(f"Fetching URL: {url} - Status Code: {response.status_code}")
     response.raise_for_status()
-    soup = BeautifulSoup(response.text, 'html.parser')
-    return soup.text
+    match response.headers.get('content-type'):
+        case None | str() as content_type if 'text/html' not in content_type:
+            raise ValueError(f"URL não é uma página HTML: {url} (content-type: {content_type})")
+        case "text/html" | str() as content_type if 'text/html' in content_type:
+            soup = BeautifulSoup(response.text, 'html.parser')
+            return soup.text
+        case "application/pdf" | str() as content_type if 'application/pdf' in content_type:
+            raise NotImplementedError("PDF parsing not implemented yet.")
+    
 
 
 if __name__ == "__main__":
     import asyncio
     url = "https://example.com"
     text = asyncio.run(get_url_text(url))
-    print(text)
