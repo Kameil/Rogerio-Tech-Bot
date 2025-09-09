@@ -6,4 +6,3 @@ rogerio
 .vscode
 *.db
 *.log
-cogs/urgente.py
