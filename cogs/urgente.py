@@ -18,7 +18,7 @@ class Urgente(commands.Cog):
             if not inter.channel.permissions_for(inter.user).mention_everyone:
                 return await inter.response.send_message("Você não tem permissão de usar isso.", ephemeral=True)
 
-            imagem_url = "https://images-ext-1.discordapp.net/external/L7Dwzb_qoJ7Qbe7TagF9GWoXQsgPpgh1bYqUUlCNnyY/%3Falt%3Dmedia%26token%3Df1d9b282-e51a-42b4-84ee-dc138a997900/https/firebasestorage.googleapis.com/v0/b/st2022.appspot.com/o/Screenshot_20221118-130810_YouTube.jpg?format=webp&width=115&height=115"
+            imagem_url = "https://i.imgur.com/WJfdTul.png"
             embed = discord.Embed()
             embed.set_image(url=imagem_url)
 
