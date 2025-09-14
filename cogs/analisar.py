@@ -92,14 +92,29 @@ class Analisar(commands.Cog):
 
     # a funcao agora e mais generica, apenas envia para a api
     async def _generate_analysis(self, inter: discord.Interaction, contents: list) -> types.GenerateContentResponse:
-        response = await self.client.aio.models.generate_content(
-            contents=contents, config=self.bot.generation_config, model="gemini-2.5-flash-lite"
+        generation_config = types.GenerateContentConfig(
+            temperature=0.7,
+            max_output_tokens=3000,
+            system_instruction=self.bot.system_instruction,
+
         )
+        response = await self.client.aio.models.generate_content(
+            contents=contents, config=generation_config, model="gemini-2.5-flash-lite"
+        )
+
         
         if not response.candidates:
             reason = response.prompt_feedback.block_reason.name if response.prompt_feedback else "Desconhecida"
             raise AnalysisBlockedError(f"A resposta foi bloqueada pela API por motivo de segurança: {reason}")
         
+        for candidate in response.candidates:
+                for part in candidate.content.parts:
+                    if part.text:
+                        if part.thought:
+                            print("THOUGHT: ", part.text)
+                            continue
+                        print("NORMAL PART: ", part.text)
+
         if response.usage_metadata:
             self.tokens_monitor.insert_usage(uso=response.usage_metadata.total_token_count, guild_id=inter.guild.id)
             
