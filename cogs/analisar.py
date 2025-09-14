@@ -93,7 +93,7 @@ class Analisar(commands.Cog):
     # a funcao agora e mais generica, apenas envia para a api
     async def _generate_analysis(self, inter: discord.Interaction, contents: list) -> types.GenerateContentResponse:
         response = await self.client.aio.models.generate_content(
-            contents=contents, config=self.bot.generation_config, model=self.bot.model
+            contents=contents, config=self.bot.generation_config, model="gemini-2.5-flash-lite"
         )
         
         if not response.candidates:
