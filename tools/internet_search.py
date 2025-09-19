@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import json
 from langchain_community.tools import DuckDuckGoSearchResults
 
 logger = logging.getLogger(__name__)
@@ -12,14 +13,18 @@ async def pesquisar_na_internet(pesquisa: str) -> str:
     Returns:
         Uma string com os resultados da pesquisa.
     """
-
-    search = DuckDuckGoSearchResults()
+    search = DuckDuckGoSearchResults(num_results=5, output_format="json")
     results = await search.ainvoke(pesquisa)
+    results = json.loads(results)
+    organized_string = "\n\n".join(
+    f"Título: {item['title']}\nLink: {item['link']}\nResumo: {item['snippet']}" 
+    for item in results 
+    )
     logger.info(f"Resultados da pesquisa: {results}")
-    return str(results)
-    
+    return organized_string
 
 
 
 if __name__ == "__main__":
-    asyncio.run(pesquisar_na_internet("bolsonaro 14 mil"))
+    result = asyncio.run(pesquisar_na_internet("roblox"))
+    print(result)
