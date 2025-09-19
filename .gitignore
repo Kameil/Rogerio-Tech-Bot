@@ -6,3 +6,4 @@ rogerio
 .vscode
 *.db
 *.log
+cogs/evoluiu.py
