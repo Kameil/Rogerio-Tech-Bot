@@ -69,7 +69,7 @@ class Chat(commands.Cog):
         self.message_queue = {}
         self.security_cog: Security = None
         self.global_cooldown_until = None 
-        self.last_tools_index = 0
+        self.last_tools_index = {}
 
     async def cog_load(self):
         self.security_cog = self.bot.get_cog("Security")
@@ -283,11 +283,19 @@ class Chat(commands.Cog):
             await message.reply(f"Ocorreu um erro ao comunicar com a API", mention_author=False)
         return None
     
-    def get_used_function_toll(self, response: types.GenerateContentResponse) -> Union[list[str], None]:
+    def get_used_function_toll(self, response: types.GenerateContentResponse, channel_id) -> Union[list[str], None]:
         if response.automatic_function_calling_history:
+            last_tools_index = self.last_tools_index.get(channel_id, 0)
+            print(f"DEBUG: channel_id={channel_id}, last_tools_index={last_tools_index}, type={type(last_tools_index)}")
             total_calls_history = response.automatic_function_calling_history
-            calls_history = total_calls_history[self.last_tools_index:]
-            self.last_tools_index = len(total_calls_history)
+            if len(total_calls_history) > last_tools_index:
+                calls_history = total_calls_history[last_tools_index:]
+                self.last_tools_index[channel_id] = len(total_calls_history)
+
+            else:
+                calls_history = total_calls_history
+                self.last_tools_index[channel_id] = len(total_calls_history)
+                
             tools_used = []
             for call_content in calls_history:
                 for part in call_content.parts:
@@ -323,7 +331,7 @@ class Chat(commands.Cog):
         
         summary_text = ""
         details_text = ""
-        tolls_used = self.get_used_function_toll(response)
+        tolls_used = self.get_used_function_toll(response, channel_id=message.channel.id if isinstance(message.channel, discord.TextChannel) else message.author.id)
         tools_used_text = "\n".join(tolls_used) if tolls_used else ""
 
         if match:
