@@ -11,7 +11,7 @@ logger = logging.getLogger(__name__)
 class Security(commands.Cog):
     # anti-flood e fallback
     # movidas para dentro da classe para serem acessadas corretamente
-    FALLBACK_MODEL = "gemini-1.5-flash" # trocado para um modelo mais recente que o flash-lite
+    FALLBACK_MODEL = "gemini-2.5-flash-lite" # trocado para um modelo mais recente que o flash-lite
     BUCKET_CAPACITY = 6.0
     LEAK_RATE_PER_SEC = 0.7
     COST_PER_TEXT = 1.5
