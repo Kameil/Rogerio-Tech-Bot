@@ -113,29 +113,30 @@ class Analisar(commands.Cog):
                 continue
         return messages
 
-    async def _generate_analysis(
-        self, inter: discord.Interaction, user_data: dict
-    ) -> types.GenerateContentResponse:
-        contents = [
-            user_data['prompt'],
-            f"Nome do usuário: {user_data['user'].display_name}",
-            "Histórico de Mensagens:\n" + "\n".join(user_data['messages']),
-            types.Part.from_bytes(
-                data=user_data['avatar_bytes'], mime_type="image/png"
-            )
-        ]
+    # a funcao agora e mais generica, apenas envia para a api
+    async def _generate_analysis(self, inter: discord.Interaction, contents: list) -> types.GenerateContentResponse:
+        generation_config = types.GenerateContentConfig(
+            temperature=0.7,
+            max_output_tokens=3000,
+            system_instruction=self.bot.system_instruction,
 
+        )
         response = await self.client.aio.models.generate_content(
-            contents=contents,
-            config=self.bot.generation_config,
-            model=self.bot.model
+            contents=contents, config=generation_config, model="gemini-2.5-flash-lite"
         )
 
+        
         if not response.candidates:
             reason = response.prompt_feedback.block_reason.name if response.prompt_feedback else "Desconhecida"
-            raise AnalysisBlockedError(
-                f"A resposta foi bloqueada pela API por motivo de segurança: {reason}"
-            )
+            raise AnalysisBlockedError(f"A resposta foi bloqueada pela API por motivo de segurança: {reason}")
+        
+        for candidate in response.candidates:
+                for part in candidate.content.parts:
+                    if part.text:
+                        if part.thought:
+                            print("THOUGHT: ", part.text)
+                            continue
+                        print("NORMAL PART: ", part.text)
 
         if response.usage_metadata:
             self.tokens_monitor.insert_usage(

@@ -48,6 +48,10 @@ GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=2000,
     temperature=0.7,
     system_instruction=SYSTEM_INSTRUCTION,
+    thinking_config=types.ThinkingConfig(
+        thinking_budget=2000,
+        include_thoughts=False,
+    ),
     tools=[get_url_text, pesquisar_na_internet],
 )
 

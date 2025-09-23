@@ -69,6 +69,7 @@ class Chat(commands.Cog):
         self.message_queue = {}
         self.security_cog: Security = None
         self.global_cooldown_until = None 
+        self.last_tools_index = {}
 
     async def cog_load(self):
         self.security_cog = self.bot.get_cog("Security")
@@ -281,9 +282,38 @@ class Chat(commands.Cog):
             logger.exception(f"Erro inesperado ao enviar para a API GenAI")
             await message.reply(f"Ocorreu um erro ao comunicar com a API", mention_author=False)
         return None
+    
+    def get_used_function_toll(self, response: types.GenerateContentResponse, channel_id) -> Union[list[str], None]:
+        if response.automatic_function_calling_history:
+            last_tools_index = self.last_tools_index.get(channel_id, 0)
+            print(f"DEBUG: channel_id={channel_id}, last_tools_index={last_tools_index}, type={type(last_tools_index)}")
+            total_calls_history = response.automatic_function_calling_history
+            if len(total_calls_history) > last_tools_index:
+                calls_history = total_calls_history[last_tools_index:]
+                self.last_tools_index[channel_id] = len(total_calls_history)
+
+            else:
+                calls_history = total_calls_history
+                self.last_tools_index[channel_id] = len(total_calls_history)
+                
+            tools_used = []
+            for call_content in calls_history:
+                for part in call_content.parts:
+                    if part.function_call:
+
+                        print(part.function_call)
+                        print("FUNCTION CALLING: ", part.function_call.name)
+                        print("ARGUMENTS: ", part.function_call.args)
+                        if part.function_call.name == "get_url_text":
+                            tools_used.append("```\n" + "Acessou: " + part.function_call.args["url"] + "\n```")
+                        if part.function_call.name == "pesquisar_na_internet":
+                            tools_used.append("```\n" + "Pesquisou: " + part.function_call.args["pesquisa"] + "\n```")
+            return tools_used
+        return None
+
 
     async def _send_reply(self, response: types.GenerateContentResponse, message: discord.Message):
-        # extrai o texto de forma segura para evitar o aviso "non-text parts"
+        # extrai o texto de forma segura
         try:
             text_parts = [part.text for part in response.candidates[0].content.parts if hasattr(part, "text")]
             text = "".join(text_parts)
@@ -299,20 +329,21 @@ class Chat(commands.Cog):
 
         match = re.search(r"\[RESUMO\](.*?)\[DETALHES\](.*)", clean_text, re.DOTALL)
         
-        full_reply_text = ""
         summary_text = ""
         details_text = ""
+        tolls_used = self.get_used_function_toll(response, channel_id=message.channel.id if isinstance(message.channel, discord.TextChannel) else message.author.id)
+        tools_used_text = "\n".join(tolls_used) if tolls_used else ""
 
         if match:
             summary_text = match.group(1).strip()
             details_text = match.group(2).strip()
-            full_reply_text = f"{summary_text}\n\n{details_text}".strip()
+            full_reply_text = f"{summary_text}\n\n{tools_used_text}\n{details_text}".strip()
         else:
-            full_reply_text = clean_text
+            # cola os tools também aqui
+            full_reply_text = f"{tools_used_text}\n{clean_text}".strip()
 
         if len(full_reply_text) <= CHARACTER_LIMIT:
             await message.reply(full_reply_text, mention_author=False)
-            
         else:
             if not summary_text:
                 summary_text = "A resposta é um pouco longa, clique no botão abaixo para ver os detalhes"
@@ -322,9 +353,11 @@ class Chat(commands.Cog):
             view = DetailsView(author=message.author, full_text=details_text)
             reply_message = await message.reply(summary_text, view=view, mention_author=False)
             view.message = reply_message
+
         print(full_reply_text)
         await self.check_tools_in_response(full_reply_text, message)
 
+        # acho que nao tem mais pensamento para remover, mas vou deixar aqui 
     def remover_pensamento_da_resposta(self, resposta: str) -> str:
         return re.sub(r"```[\r]?\nPensamento:[\r]?\n.*?\n```", "", resposta, flags=re.DOTALL).strip()
 
