@@ -102,7 +102,7 @@ async def load_cogs():
     try:
         cogs_dir = "cogs"
         for file in os.listdir(cogs_dir):
-            if file.endswith(".py") and file not in ["experimental.py", "imaginar.py"]:
+            if file.endswith(".py") and file not in ["experimental.py", "imaginar.py", "presence.py"]:
                 await bot.load_extension(f"{cogs_dir}.{file[:-3]}")
                 logger.info(f"Cog '{file[:-3]}' carregado com sucesso.")
     except Exception as e:
