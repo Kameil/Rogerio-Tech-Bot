@@ -1,12 +1,6 @@
 # 🤖 Rogério Tech
 
 <p align="center">
-  <a href="https://top.gg/bot/1041361324506087555" target="_blank">
-    <img src="https://top.gg/api/widget/servers/1041361324506087555.svg" alt="Rogério Tech Server Count">
-  </a>
-</p>
-
-<p align="center">
   <img src="https://i.imgur.com/TKphVxW.png" width="200" alt="Rogério Tech Logo">
 </p>
 
@@ -35,27 +29,10 @@ O desenvolvimento está **concluído**, mas o código permanece público para es
 
 ---
 
-## ❓ FAQ
-
-**O bot é confiável?**  
-Sim, o código-fonte é público e não exige permissões excessivas.
-
-**Por que o projeto foi finalizado?**  
-O projeto atingiu seus objetivos de aprendizado e funcionalidades essenciais já estão disponíveis.  
-
----
-
 ## 📚 Documentação
 
 - <a href="https://googleapis.github.io/python-genai/" target="_blank">Documentação da API Google</a>  
 - <a href="https://ai.google.dev/gemini-api/docs/quickstart?hl=pt-br&lang=python" target="_blank">Guia rápido Gemini API</a>
-
----
-
-## 🛠️ Tecnologias
-
-- **Python**  
-- Dependências listadas em [requirements.txt](requirements.txt)
 
 ---
 
