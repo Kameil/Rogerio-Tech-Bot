@@ -13,8 +13,9 @@ from google import genai
 from google.genai import types
 from google.genai.errors import ClientError, ServerError
 
-from .security import Security
 from tools.extract_url_text import get_url_text
+
+from .security import Security
 
 logger = logging.getLogger(__name__)
 
@@ -27,6 +28,7 @@ class DetailsView(discord.ui.View):
     uma view que mostra um botao 'ver detalhes'. quando clicado, envia o texto completo
     em uma ou mais mensagens para o autor da interacao
     """
+
     def __init__(self, author: discord.User, full_text: str):
         super().__init__(timeout=300)
         self.author = author
@@ -38,17 +40,19 @@ class DetailsView(discord.ui.View):
             try:
                 await self.message.edit(view=None)
             except discord.HTTPException:
-                pass 
+                pass
 
     @discord.ui.button(label="📄 Ver detalhes", style=discord.ButtonStyle.secondary)
-    async def details_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+    async def details_button(
+        self, interaction: discord.Interaction, button: discord.ui.Button
+    ):
         if interaction.user.id != self.author.id:
             await interaction.response.send_message(
                 "Apenas o autor da mensagem original pode fazer isso", ephemeral=True
             )
             return
 
-        await interaction.response.defer(ephemeral=True) 
+        await interaction.response.defer(ephemeral=True)
         button.disabled = True
         await interaction.message.edit(view=self)
 
@@ -68,7 +72,7 @@ class Chat(commands.Cog):
         self.processing = {}
         self.message_queue = {}
         self.security_cog: Security = None
-        self.global_cooldown_until = None 
+        self.global_cooldown_until = None
         self.last_tools_index = {}
 
     async def cog_load(self):
@@ -81,31 +85,42 @@ class Chat(commands.Cog):
         if self.security_cog is None:
             self.security_cog = self.bot.get_cog("Security")
             if self.security_cog is None:
-                logger.error("Cog 'Security' não encontrado. As mensagens não serão processadas")
-                return 
-        
+                logger.error(
+                    "Cog 'Security' não encontrado. As mensagens não serão processadas"
+                )
+                return
+
         if message.author.bot or not (
-            self.bot.user.mentioned_in(message) or isinstance(message.channel, discord.DMChannel)
+            self.bot.user.mentioned_in(message)
+            or isinstance(message.channel, discord.DMChannel)
         ):
             return
-            
-        perms = message.channel.permissions_for(message.guild.me if message.guild else self.bot.user)
+
+        perms = message.channel.permissions_for(
+            message.guild.me if message.guild else self.bot.user
+        )
         if not perms.send_messages:
             return
 
-        message_cost = self.security_cog.COST_PER_TEXT + (len(message.attachments) * self.security_cog.COST_PER_ATTACHMENT)
+        message_cost = self.security_cog.COST_PER_TEXT + (
+            len(message.attachments) * self.security_cog.COST_PER_ATTACHMENT
+        )
         if await self.security_cog.is_rate_limited(message.author.id, message_cost):
-            logger.warning(f"Usuário {message.author.id} foi limitado por flood. Custo: {message_cost}")
+            logger.warning(
+                f"Usuário {message.author.id} foi limitado por flood. Custo: {message_cost}"
+            )
             try:
-                if perms.add_reactions: await message.add_reaction("⏳")
-            except discord.HTTPException: pass
+                if perms.add_reactions:
+                    await message.add_reaction("⏳")
+            except discord.HTTPException:
+                pass
             return
 
         channel_id = str(message.channel.id)
         if channel_id not in self.message_queue:
             self.message_queue[channel_id] = Queue()
         await self.message_queue[channel_id].put(message)
-        
+
         if not self.processing.get(channel_id, False):
             self.processing[channel_id] = True
             asyncio.create_task(self.process_queue(channel_id))
@@ -116,7 +131,10 @@ class Chat(commands.Cog):
             try:
                 await self.handle_message(message)
             except Exception as e:
-                logger.error(f"Erro crítico ao processar a mensagem {message.id}: {e}", exc_info=True)
+                logger.error(
+                    f"Erro crítico ao processar a mensagem {message.id}: {e}",
+                    exc_info=True,
+                )
                 error_embed = discord.Embed(
                     title="Ocorreu um erro inesperado!",
                     description=f"Não foi possivel processar sua solicitacao\n```py\n{traceback.format_exc(limit=1)}\n```",
@@ -125,7 +143,8 @@ class Chat(commands.Cog):
                 error_embed.set_footer(text="Suporte: https://discord.gg/H77FTb7hwH")
                 try:
                     await message.channel.send(embed=error_embed)
-                except discord.HTTPException: pass
+                except discord.HTTPException:
+                    pass
             finally:
                 self.message_queue[channel_id].task_done()
         self.processing[channel_id] = False
@@ -143,18 +162,27 @@ class Chat(commands.Cog):
 
     async def _build_prompt_parts(self, message: discord.Message) -> list | None:
         if isinstance(message.channel, discord.DMChannel):
-            context = f'você está em uma conversa privada com "{message.author.display_name}"'
+            context = (
+                f'você está em uma conversa privada com "{message.author.display_name}"'
+            )
         else:
             context = f'você está no canal #{message.channel.name} do servidor "{message.guild.name}"'
 
-        clean_message = message.content.replace(f"<@{self.bot.user.id}>", "Rogerio Tech").strip()
-        
-        prompt_parts = [f'contexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"']
-        
+        clean_message = message.content.replace(
+            f"<@{self.bot.user.id}>", "Rogerio Tech"
+        ).strip()
+
+        prompt_parts = [
+            f'contexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"'
+        ]
+
         if message.attachments:
-            attachment_parts, text_file_contents = await self._process_attachments(message)
-            if attachment_parts is None and text_file_contents is None: return None
-            
+            attachment_parts, text_file_contents = await self._process_attachments(
+                message
+            )
+            if attachment_parts is None and text_file_contents is None:
+                return None
+
             # adiciona o conteúdo dos arquivos de texto ao prompt principal
             if text_file_contents:
                 prompt_parts.append(text_file_contents)
@@ -162,10 +190,12 @@ class Chat(commands.Cog):
             # adiciona outros anexos (imagens, etc.)
             if attachment_parts:
                 prompt_parts.extend(attachment_parts)
-            
+
         return prompt_parts
 
-    async def _process_attachments(self, message: discord.Message) -> tuple[list | None, str | None]:
+    async def _process_attachments(
+        self, message: discord.Message
+    ) -> tuple[list | None, str | None]:
         parts = []
         text_contents = []
 
@@ -175,7 +205,7 @@ class Chat(commands.Cog):
                 logger.warning(error_msg)
                 await message.reply(error_msg, mention_author=False)
                 return None, None
-            
+
             try:
                 content_bytes = await attachment.read()
                 mime_type = attachment.content_type or "application/octet-stream"
@@ -184,31 +214,47 @@ class Chat(commands.Cog):
                 if mime_type.startswith("text/"):
                     try:
                         # tenta decodificar como UTF-8, mas usa 'latin-1' como fallback para evitar erros
-                        text = content_bytes.decode('utf-8', errors='replace')
-                        text_contents.append(f'\n\n--- CONTEÚDO DO ARQUIVO "{attachment.filename}" ---\n{text}')
+                        text = content_bytes.decode("utf-8", errors="replace")
+                        text_contents.append(
+                            f'\n\n--- CONTEÚDO DO ARQUIVO "{attachment.filename}" ---\n{text}'
+                        )
                     except Exception as e:
-                        logger.error(f"Não foi possível ler o conteúdo do arquivo de texto {attachment.filename}: {e}")
-                        await message.reply(f"Não consegui ler o conteúdo do arquivo de texto '{attachment.filename}'.", mention_author=False)
+                        logger.error(
+                            f"Não foi possível ler o conteúdo do arquivo de texto {attachment.filename}: {e}"
+                        )
+                        await message.reply(
+                            f"Não consegui ler o conteúdo do arquivo de texto '{attachment.filename}'.",
+                            mention_author=False,
+                        )
                         return None, None
                 else:
                     # p/ outros tipos de arquivo (imagens, etc.), envia como anexo binário
-                    parts.append(types.Part.from_bytes(data=content_bytes, mime_type=mime_type))
+                    parts.append(
+                        types.Part.from_bytes(data=content_bytes, mime_type=mime_type)
+                    )
 
             except discord.HTTPException as e:
                 logger.error(f"Falha ao baixar o anexo {attachment.filename}: {e}")
-                await message.reply(f"Não consegui baixar o anexo '{attachment.filename}'", mention_author=False)
+                await message.reply(
+                    f"Não consegui baixar o anexo '{attachment.filename}'",
+                    mention_author=False,
+                )
                 return None, None
             except Exception as e:
                 logger.error(f"Falha ao processar o anexo {attachment.filename}: {e}")
-                await message.reply(f"Não consegui ler o anexo '{attachment.filename}'", mention_author=False)
+                await message.reply(
+                    f"Não consegui ler o anexo '{attachment.filename}'",
+                    mention_author=False,
+                )
                 return None, None
-        
+
         # junta todo o conteúdo de texto de múltiplos arquivos em uma única string
         full_text_content = "\n".join(text_contents) if text_contents else None
         return parts if parts else None, full_text_content
 
-
-    async def check_tools_in_response(self, response: str, message: discord.Message) -> bool:
+    async def check_tools_in_response(
+        self, response: str, message: discord.Message
+    ) -> bool:
         padrao = r"```openlink\n(\S*?)\n```"
         result = re.search(padrao, response)
         if not result:
@@ -216,49 +262,79 @@ class Chat(commands.Cog):
         try:
             url_text = await get_url_text(result.group(1))
         except Exception as e:
-            url_text = f"Não consegui extrair o texto da URL {result.group(1)}. Erro: {e}"
-        
-        prompt_parts = [f'contexto: Voce abriu a url "{result.group(1)}" e extraiu o seguinte texto: {url_text}',]
+            url_text = (
+                f"Não consegui extrair o texto da URL {result.group(1)}. Erro: {e}"
+            )
+
+        prompt_parts = [
+            f'contexto: Voce abriu a url "{result.group(1)}" e extraiu o seguinte texto: {url_text}',
+        ]
         response = await self._send_to_genai(prompt_parts=prompt_parts, message=message)
         if not response:
             return False
         await self._send_reply(response, message)
         return True
 
-
-    async def _send_to_genai(self, prompt_parts: list, message: discord.Message) -> types.GenerateContentResponse | None:
+    async def _send_to_genai(
+        self, prompt_parts: list, message: discord.Message
+    ) -> types.GenerateContentResponse | None:
         # verifica se o "disjuntor" (circuit breaker) global está ativo
-        if self.global_cooldown_until and datetime.datetime.now(datetime.timezone.utc) < self.global_cooldown_until:
-            wait_seconds = (self.global_cooldown_until - datetime.datetime.now(datetime.timezone.utc)).total_seconds()
+        if (
+            self.global_cooldown_until
+            and datetime.datetime.now(datetime.timezone.utc)
+            < self.global_cooldown_until
+        ):
+            wait_seconds = (
+                self.global_cooldown_until
+                - datetime.datetime.now(datetime.timezone.utc)
+            ).total_seconds()
             logger.warning("Requisição bloqueada pelo cooldown global da API")
-            await message.reply(f"O sistema está sobrecarregado. Por favor, tente novamente em **{int(wait_seconds) + 1} segundos**", mention_author=False)
+            await message.reply(
+                f"O sistema está sobrecarregado. Por favor, tente novamente em **{int(wait_seconds) + 1} segundos**",
+                mention_author=False,
+            )
             return None
-        
+
         channel_id = str(message.channel.id)
-        
+
         # lógica de seleção de modelo atualizada
         model_name, gen_config = (
-            (self.security_cog.FALLBACK_MODEL, self.bot.generation_config) if self.security_cog.is_high_traffic_mode
+            (self.security_cog.FALLBACK_MODEL, self.bot.generation_config)
+            if self.security_cog.is_high_traffic_mode
             else (self.bot.model, self.bot.generation_config)
         )
-        
-        logger.info(f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})")
+
+        logger.info(
+            f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})"
+        )
         if self.chats.get(channel_id):
             chat_session = self.chats[channel_id]
         else:
-            chat_session = self.client.aio.chats.create(model=f'models/{model_name}', config=gen_config)
+            chat_session = self.client.aio.chats.create(
+                model=f"models/{model_name}", config=gen_config
+            )
             self.chats[channel_id] = chat_session
-            
+
         try:
             response = await chat_session.send_message(prompt_parts)
             if response.prompt_feedback and response.prompt_feedback.block_reason != 0:
-                reason = response.prompt_feedback.block_reason.name.replace('_', ' ').title()
+                reason = response.prompt_feedback.block_reason.name.replace(
+                    "_", " "
+                ).title()
                 logger.warning(f"Resposta bloqueada (prompt). Razão: {reason}")
-                await message.reply(f"Minha política de segurança bloqueou sua solicitação. Razão: **{reason}**", mention_author=False)
+                await message.reply(
+                    f"Minha política de segurança bloqueou sua solicitação. Razão: **{reason}**",
+                    mention_author=False,
+                )
                 return None
             if not response.candidates:
-                logger.warning("Resposta da API sem candidatos (provavelmente bloqueada por segurança)")
-                await message.reply("Não consegui gerar uma resposta, provavelmente por violar minhas políticas de segurança", mention_author=False)
+                logger.warning(
+                    "Resposta da API sem candidatos (provavelmente bloqueada por segurança)"
+                )
+                await message.reply(
+                    "Não consegui gerar uma resposta, provavelmente por violar minhas políticas de segurança",
+                    mention_author=False,
+                )
                 return None
             if response.usage_metadata:
                 self.monitor.tokens_monitor.insert_usage(
@@ -266,27 +342,50 @@ class Chat(commands.Cog):
                     guild_id=message.guild.id if message.guild else "dm",
                 )
             return response
-        except ServerError as e: # captura erros de servidor (como 5xx e 429)
+        except ServerError as e:  # captura erros de servidor (como 5xx e 429)
             # implementa o "disjuntor" se o erro for de cota
             if "429" in str(e):
-                logger.error(f"Erro de cota (429) detectado. Ativando cooldown global de 30 segundos")
-                self.global_cooldown_until = datetime.datetime.now(datetime.timezone.utc) + datetime.timedelta(seconds=30)
-                await message.reply("Estamos com um volume muito alto de requisições. Por favor, tente novamente em alguns instantes", mention_author=False)
+                logger.error(
+                    f"Erro de cota (429) detectado. Ativando cooldown global de 30 segundos"
+                )
+                self.global_cooldown_until = datetime.datetime.now(
+                    datetime.timezone.utc
+                ) + datetime.timedelta(seconds=30)
+                await message.reply(
+                    "Estamos com um volume muito alto de requisições. Por favor, tente novamente em alguns instantes",
+                    mention_author=False,
+                )
             else:
-                logger.error(f"Erro na API do Google (servidor): {e}\n**Suporte:** <https://discord.gg/H77FTb7hwH>")
-                await message.reply(f"Ocorreu um erro com a api do google: `{e}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>", mention_author=False)
-        except ClientError as e: # captura erros do lado do cliente (como requisição mal formatada)
+                logger.error(
+                    f"Erro na API do Google (servidor): {e}\n**Suporte:** <https://discord.gg/H77FTb7hwH>"
+                )
+                await message.reply(
+                    f"Ocorreu um Erro de Servidor `code:{e.status}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>",
+                    mention_author=False,
+                )
+        except (
+            ClientError
+        ) as e:  # captura erros do lado do cliente (como requisição mal formatada)
             logger.error(f"Erro na API do Google (cliente): {e}")
-            await message.reply(f"Ocorreu um erro com a API do Google: `{e}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>", mention_author=False)
+            await message.reply(
+                f"Ocorreu um Erro de Servidor `code:{e.status}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>",
+                mention_author=False,
+            )
         except Exception as e:
             logger.exception(f"Erro inesperado ao enviar para a API GenAI")
-            await message.reply(f"Ocorreu um erro ao comunicar com a API", mention_author=False)
+            await message.reply(
+                f"Ocorreu um erro ao comunicar com a API", mention_author=False
+            )
         return None
-    
-    def get_used_function_toll(self, response: types.GenerateContentResponse, channel_id) -> Union[list[str], None]:
+
+    def get_used_function_toll(
+        self, response: types.GenerateContentResponse, channel_id
+    ) -> Union[list[str], None]:
         if response.automatic_function_calling_history:
             last_tools_index = self.last_tools_index.get(channel_id, 0)
-            print(f"DEBUG: channel_id={channel_id}, last_tools_index={last_tools_index}, type={type(last_tools_index)}")
+            print(
+                f"DEBUG: channel_id={channel_id}, last_tools_index={last_tools_index}, type={type(last_tools_index)}"
+            )
             total_calls_history = response.automatic_function_calling_history
             if len(total_calls_history) > last_tools_index:
                 calls_history = total_calls_history[last_tools_index:]
@@ -295,49 +394,72 @@ class Chat(commands.Cog):
             else:
                 calls_history = total_calls_history
                 self.last_tools_index[channel_id] = len(total_calls_history)
-                
+
             tools_used = []
             for call_content in calls_history:
                 for part in call_content.parts:
                     if part.function_call:
-
                         print(part.function_call)
                         print("FUNCTION CALLING: ", part.function_call.name)
                         print("ARGUMENTS: ", part.function_call.args)
                         if part.function_call.name == "get_url_text":
-                            tools_used.append("```\n" + "Acessou: " + part.function_call.args["url"] + "\n```")
+                            tools_used.append(
+                                "```\n"
+                                + "Acessou: "
+                                + part.function_call.args["url"]
+                                + "\n```"
+                            )
                         if part.function_call.name == "pesquisar_na_internet":
-                            tools_used.append("```\n" + "Pesquisou: " + part.function_call.args["pesquisa"] + "\n```")
+                            tools_used.append(
+                                "```\n"
+                                + "Pesquisou: "
+                                + part.function_call.args["pesquisa"]
+                                + "\n```"
+                            )
             return tools_used
         return None
 
-
-    async def _send_reply(self, response: types.GenerateContentResponse, message: discord.Message):
+    async def _send_reply(
+        self, response: types.GenerateContentResponse, message: discord.Message
+    ):
         # extrai o texto de forma segura
         try:
-            text_parts = [part.text for part in response.candidates[0].content.parts if hasattr(part, "text")]
+            text_parts = [
+                part.text
+                for part in response.candidates[0].content.parts
+                if hasattr(part, "text")
+            ]
             text = "".join(text_parts)
         except (ValueError, IndexError):
             logger.warning("Não foi possível extrair texto da resposta da API")
             text = ""
-            
+
         clean_text = self.remover_pensamento_da_resposta(text).strip()
         if not clean_text:
             logger.warning("A resposta da API estava vazia após a limpeza")
-            await message.reply("Recebi uma resposta vazia e não pude processá-la", mention_author=False)
+            await message.reply(
+                "Recebi uma resposta vazia e não pude processá-la", mention_author=False
+            )
             return
 
         match = re.search(r"\[RESUMO\](.*?)\[DETALHES\](.*)", clean_text, re.DOTALL)
-        
+
         summary_text = ""
         details_text = ""
-        tolls_used = self.get_used_function_toll(response, channel_id=message.channel.id if isinstance(message.channel, discord.TextChannel) else message.author.id)
+        tolls_used = self.get_used_function_toll(
+            response,
+            channel_id=message.channel.id
+            if isinstance(message.channel, discord.TextChannel)
+            else message.author.id,
+        )
         tools_used_text = "\n".join(tolls_used) if tolls_used else ""
 
         if match:
             summary_text = match.group(1).strip()
             details_text = match.group(2).strip()
-            full_reply_text = f"{summary_text}\n\n{tools_used_text}\n{details_text}".strip()
+            full_reply_text = (
+                f"{summary_text}\n\n{tools_used_text}\n{details_text}".strip()
+            )
         else:
             # cola os tools também aqui
             full_reply_text = f"{tools_used_text}\n{clean_text}".strip()
@@ -351,15 +473,20 @@ class Chat(commands.Cog):
                 details_text = full_reply_text
 
             view = DetailsView(author=message.author, full_text=details_text)
-            reply_message = await message.reply(summary_text, view=view, mention_author=False)
+            reply_message = await message.reply(
+                summary_text, view=view, mention_author=False
+            )
             view.message = reply_message
 
         print(full_reply_text)
         await self.check_tools_in_response(full_reply_text, message)
 
-        # acho que nao tem mais pensamento para remover, mas vou deixar aqui 
+        # acho que nao tem mais pensamento para remover, mas vou deixar aqui
+
     def remover_pensamento_da_resposta(self, resposta: str) -> str:
-        return re.sub(r"```[\r]?\nPensamento:[\r]?\n.*?\n```", "", resposta, flags=re.DOTALL).strip()
+        return re.sub(
+            r"```[\r]?\nPensamento:[\r]?\n.*?\n```", "", resposta, flags=re.DOTALL
+        ).strip()
 
 
 async def setup(bot):
