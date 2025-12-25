@@ -172,8 +172,11 @@ class Chat(commands.Cog):
             f"<@{self.bot.user.id}>", "Rogerio Tech"
         ).strip()
 
+
+        hoje = date.today().strftime("%d/%m/%Y")
+
         prompt_parts = [
-            f'contexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"'
+            f'data: {hoje}\ncontexto: {context}\nmensagem de "{message.author.display_name}": "{clean_message}"'
         ]
 
         if message.attachments:

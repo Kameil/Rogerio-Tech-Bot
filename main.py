@@ -4,12 +4,12 @@ import os
 
 import discord
 import httpx
-from config import api_key, token
 from discord.ext import commands
 from google import genai
 from google.genai import types
-from boas_vindas import welcome
 
+from boas_vindas import welcome
+from config import api_key, token
 from monitoramento import Monitor
 
 # logging
@@ -28,7 +28,9 @@ logger.setLevel(logging.INFO)
 
 # validação de chaves de api
 if not api_key or not token:
-    logger.error("\033[31mAPI key ou token não configurados. Verifique o config.py!\033[0m")
+    logger.error(
+        "\033[31mAPI key ou token não configurados. Verifique o config.py!\033[0m"
+    )
     raise ValueError("API key ou token não configurados")
 
 # inicializa o cliente da api generativa do google.
@@ -43,7 +45,7 @@ from tools.extract_url_text import get_url_text
 from tools.internet_search import pesquisar_na_internet
 
 # modelo padrao
-MODEL_NAME = "gemini-2.5-flash"
+MODEL_NAME = "gemini-2.5-flash-lite"
 GENERATION_CONFIG = types.GenerateContentConfig(
     max_output_tokens=2000,
     temperature=0.7,
@@ -91,7 +93,7 @@ bot.chats = {}
 bot.model = MODEL_NAME
 bot.system_instruction = SYSTEM_INSTRUCTION
 bot.generation_config = GENERATION_CONFIG
-#bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
+# bot.experimental_generation_config = EXPERIMENTAL_GENERATION_CONFIG
 bot.http_client = httpx.AsyncClient()
 bot.client = genai_client
 bot.monitor = Monitor()
@@ -102,7 +104,11 @@ async def load_cogs():
     try:
         cogs_dir = "cogs"
         for file in os.listdir(cogs_dir):
-            if file.endswith(".py") and file not in ["experimental.py", "imaginar.py", "presence.py"]:
+            if file.endswith(".py") and file not in [
+                "experimental.py",
+                "imaginar.py",
+                "presence.py",
+            ]:
                 await bot.load_extension(f"{cogs_dir}.{file[:-3]}")
                 logger.info(f"Cog '{file[:-3]}' carregado com sucesso.")
     except Exception as e:
@@ -143,13 +149,17 @@ async def on_message(message: discord.Message):
         or bot.user in message.mentions
         or isinstance(message.channel, discord.DMChannel)
     ):
-        logger.info(f"Mensagem de {message.author} em #{message.channel}: {message.content}")
+        logger.info(
+            f"Mensagem de {message.author} em #{message.channel}: {message.content}"
+        )
 
     await bot.process_commands(message)
+
 
 @bot.event
 async def on_member_join(member):
     await welcome.handle_member_join(member)
+
 
 async def main():
     try:
