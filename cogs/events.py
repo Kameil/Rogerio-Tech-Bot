@@ -172,6 +172,7 @@ class Chat(commands.Cog):
             f"<@{self.bot.user.id}>", "Rogerio Tech"
         ).strip()
 
+        from datetime import date
 
         hoje = date.today().strftime("%d/%m/%Y")
 
