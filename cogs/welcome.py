@@ -13,7 +13,7 @@ class Welcome(commands.Cog):
         if not channel:
             print(f"Erro: Canal {self.CHANNEL_ID} não encontrado.")
             return
-a
+
         total_membros = member.guild.member_count
 
         embed = discord.Embed(
