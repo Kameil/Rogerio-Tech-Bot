@@ -53,14 +53,8 @@ O desenvolvimento está **concluído**, mas o código permanece público para es
 - <a href="https://discord.gg/H77FTb7hw" target="_blank">Servidor oficial Discord</a> – apenas para reportar problemas e tirar dúvidas.  
 - Convide o bot: <a href="https://discord.com/oauth2/authorize?client_id=1041361324506087555&permissions=277025508416&integration_type=0&scope=applications.commands+bot" target="_blank">Clique aqui</a>.
 
-<p align="center">
-  <a href="https://top.gg/bot/1041361324506087555" target="_blank">
-    <img src="https://top.gg/api/widget/1041361324506087555.svg?status" alt="Rogério Tech Status">
-  </a>
-</p>
-
 ---
 
 <div align="center">
-  Criado por <a href="https://github.com/Kameil"><strong>Kameil</strong></a> e <a href="https://github.com/cafewhaze"><strong>g</strong></a>
+  Criado por <a href="https://github.com/Kameil"><strong>Kameil</strong></a> e <a href="https://github.com/sankoofa"><strong>g</strong></a>
 </div>
