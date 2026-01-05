@@ -8,7 +8,7 @@ from discord.ext import commands
 from google import genai
 from google.genai import types
 
-from boas_vindas import welcome
+# from boas_vindas import welcome cannot import welcome from boas_vindas
 from config import api_key, token
 from monitoramento import Monitor
 
