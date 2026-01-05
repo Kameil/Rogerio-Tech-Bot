@@ -14,6 +14,7 @@ from google.genai import types
 from google.genai.errors import ClientError, ServerError
 
 from tools.extract_url_text import get_url_text
+from tools.generate import ModelUsageRegulator
 
 from .security import Security
 
@@ -74,6 +75,7 @@ class Chat(commands.Cog):
         self.security_cog: Security = None
         self.global_cooldown_until = None
         self.last_tools_index = {}
+        self.usage_regulator = ModelUsageRegulator()
 
     async def cog_load(self):
         self.security_cog = self.bot.get_cog("Security")
@@ -302,22 +304,37 @@ class Chat(commands.Cog):
         channel_id = str(message.channel.id)
 
         # lógica de seleção de modelo atualizada
-        model_name, gen_config = (
-            (self.security_cog.FALLBACK_MODEL, self.bot.generation_config)
-            if self.security_cog.is_high_traffic_mode
-            else (self.bot.model, self.bot.generation_config)
-        )
+        model_name = self.usage_regulator.get_available_model()
 
+        if not model_name:
+            logger.error("Nenhum modelo disponível no momento (todos no limite)")
+            await message.reply(
+                "Todos os modelos atingiram o limite de uso. Tente novamente em alguns minutos.",
+                mention_author=False,
+            )
+            return None
+
+        # Registra o uso ANTES da requisição
+        if not self.usage_regulator.register_usage(model_name):
+            model_name = self.usage_regulator.get_available_model()
+            if not model_name:
+                await message.reply(
+                    "Todos os modelos atingiram o limite de uso.",
+                    mention_author=False,
+                )
+                return None
+            self.usage_regulator.register_usage(model_name)
+
+        gen_config = self.bot.generation_config
         logger.info(
             f"Criando sessão de chat sem memória para o canal {channel_id} (modelo: {model_name})"
         )
-        if self.chats.get(channel_id):
-            chat_session = self.chats[channel_id]
-        else:
-            chat_session = self.client.aio.chats.create(
-                model=f"models/{model_name}", config=gen_config
-            )
-            self.chats[channel_id] = chat_session
+
+        # Sempre cria nova sessão com o modelo correto
+        chat_session = self.client.aio.chats.create(
+            model=f"models/{model_name}", config=gen_config
+        )
+        self.chats[channel_id] = chat_session
 
         try:
             response = await chat_session.send_message(prompt_parts)
@@ -346,8 +363,10 @@ class Chat(commands.Cog):
                     guild_id=message.guild.id if message.guild else "dm",
                 )
             return response
-        except ServerError as e:  # captura erros de servidor (como 5xx e 429)
-            # implementa o "disjuntor" se o erro for de cota
+        except ServerError as e:
+            # Reverte o uso em caso de erro
+            self.usage_regulator.rollback_usage(model_name)
+
             if "429" in str(e):
                 logger.error(
                     f"Erro de cota (429) detectado. Ativando cooldown global de 30 segundos"
@@ -367,15 +386,19 @@ class Chat(commands.Cog):
                     f"Ocorreu um Erro de Servidor `code:{e.status}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>",
                     mention_author=False,
                 )
-        except (
-            ClientError
-        ) as e:  # captura erros do lado do cliente (como requisição mal formatada)
+        except ClientError as e:
+            # Reverte o uso em caso de erro
+            self.usage_regulator.rollback_usage(model_name)
+
             logger.error(f"Erro na API do Google (cliente): {e}")
             await message.reply(
                 f"Ocorreu um Erro de Servidor `code:{e.status}`\n**Suporte:** <https://discord.gg/H77FTb7hwH>",
                 mention_author=False,
             )
         except Exception as e:
+            # Reverte o uso em caso de erro
+            self.usage_regulator.rollback_usage(model_name)
+
             logger.exception(f"Erro inesperado ao enviar para a API GenAI")
             await message.reply(
                 f"Ocorreu um erro ao comunicar com a API", mention_author=False
